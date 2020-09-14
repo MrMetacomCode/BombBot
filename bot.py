@@ -1,13 +1,12 @@
 import os
 import random
-#import logging
+# import logging
 
 from discord.ext import commands
 
-
-#logging.basicConfig(level=logging.DEBUG, filename='logs.txt')
-#logger = logging.getLogger(__name__)
-#logger.debug('test')
+# logging.basicConfig(level=logging.DEBUG, filename='logs.txt')
+# logger = logging.getLogger(__name__)
+# logger.debug('test')
 
 TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
 
@@ -132,6 +131,8 @@ async def roll(ctx, number_of_dice: int, number_of_sides: int):
 
 @bot.command(name='bombs', help='Find Bombs from Spreadsheet. If bomb name has spaces just smash it all together!')
 async def bomb(ctx, country=None, bomb_type=None, battle_rating=None):
+    country = country.upper()
+    bomb_type = bomb_type.upper()
 
     try:
         if country in ['AMERICA', 'AMERICAN', 'USA', 'United_States_of_America']:
@@ -152,20 +153,16 @@ async def bomb(ctx, country=None, bomb_type=None, battle_rating=None):
             country = 'FRANCE'
         elif country in ['SWEDISH']:
             country = 'SWEDEN'
-        if country.upper() not in bomb_data:
-            await ctx.send("Country is invalid.")
+        if country is None:
+            await ctx.send("Country is missing.")
             return
 
         bomb_type_list = []
         for country_ in bomb_data.values():
             for bomb_type_ in country_:
                 bomb_type_list.append(bomb_type_)
-        if bomb_type.upper() not in bomb_type_list:
+        if bomb_type not in bomb_type_list:
             await ctx.send("Bomb type is invalid.")
-            return
-
-        if country is None:
-            await ctx.send("Country is missing.")
             return
 
         if battle_rating is None:
@@ -197,7 +194,9 @@ async def bomb(ctx, country=None, bomb_type=None, battle_rating=None):
         if base_bombs_required == 0:
             await ctx.send("This bomb data is unavailable.")
         else:
-            await ctx.send(f"Bombs Required for Bases: {base_bombs_required} \nBombs Required for Airfield: {airfield_bombs_required}")
+            await ctx.send(
+                f"Bombs Required for Bases: {base_bombs_required} \nBombs Required for Airfield: "
+                f"{airfield_bombs_required}")
 
     except Exception as e:
         await ctx.send("User error, try again.")
