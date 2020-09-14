@@ -164,6 +164,10 @@ async def bomb(ctx, country=None, bomb_type=None, battle_rating=None):
             await ctx.send("Bomb type is invalid.")
             return
 
+        if country is None:
+            await ctx.send("Country is missing.")
+            return
+
         if battle_rating is None:
             await ctx.send("Battle rating is missing.")
             return
