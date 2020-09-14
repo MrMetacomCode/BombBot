@@ -9,8 +9,6 @@ from discord.ext import commands
 #logger = logging.getLogger(__name__)
 #logger.debug('test')
 
-print("Did This work")
-
 TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
 
 bot = commands.Bot(command_prefix='$')
