@@ -131,10 +131,12 @@ async def roll(ctx, number_of_dice: int, number_of_sides: int):
 
 @bot.command(name='bombs', help='Find Bombs from Spreadsheet. If bomb name has spaces just smash it all together!')
 async def bomb(ctx, country=None, bomb_type=None, battle_rating=None):
-    country = country.upper()
-    bomb_type = bomb_type.upper()
 
     try:
+        if country is None:
+            await ctx.send("Country is missing.")
+            return
+        country = country.upper()
         if country in ['AMERICA', 'AMERICAN', 'USA', 'United_States_of_America']:
             country = 'US'
         elif country in ['DE']:
@@ -153,10 +155,11 @@ async def bomb(ctx, country=None, bomb_type=None, battle_rating=None):
             country = 'FRANCE'
         elif country in ['SWEDISH']:
             country = 'SWEDEN'
-        if country is None:
-            await ctx.send("Country is missing.")
-            return
 
+        if bomb_type is None:
+            await ctx.send("Bomb type is missing.")
+            return
+        bomb_type = bomb_type.upper()
         bomb_type_list = []
         for country_ in bomb_data.values():
             for bomb_type_ in country_:
