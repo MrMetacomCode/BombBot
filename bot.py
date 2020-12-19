@@ -1,18 +1,17 @@
-import os
+# import os
 import os.path
 import random
 import pickle
-#import logging
+# import logging
 from discord import Intents
 from discord.ext import commands
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-
-#logging.basicConfig(level=logging.DEBUG, filename='logs.txt')
-#logger = logging.getLogger(__name__)
-#logger.debug('test')
+# logging.basicConfig(level=logging.DEBUG, filename='logs.txt')
+# logger = logging.getLogger(__name__)
+# logger.debug('test')
 
 TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
 SPREADSHEET_ID = '1S-AIIx2EQrLX8RHJr_AVIGPsQjehEdfUmbwKyinOs_I'
@@ -37,6 +36,15 @@ service = build('sheets', 'v4', credentials=creds)
 sheet = service.spreadsheets()
 
 
+@bot.event
+async def on_ready():
+    print("Bot is ready.")
+    print(f"Total servers: {len(bot.guilds)}")
+    print("Server names:")
+    for guild in bot.guilds:
+        print(guild.name)
+
+
 @bot.command(name='rolldice', help='Simulates rolling dice.')
 async def roll(ctx, number_of_dice: int, number_of_sides: int):
     dice = [
@@ -46,7 +54,9 @@ async def roll(ctx, number_of_dice: int, number_of_sides: int):
     await ctx.send(', '.join(dice))
 
 
-@bot.command(name='bombs', help='Find Bombs from Spreadsheet. If bomb name has spaces just smash it all together!')
+@bot.command(name='bombs', aliases=['bomb'], help='For War Thunder game. Finds bombs from spreadsheet and returns '
+                                                  'bombs required to destroy a base and bombs required to destroy an '
+                                                  'airfield.')
 async def bomb(ctx, country=None, bomb_type=None, battle_rating=None, four_base=None):
     american_bombs = 'Bomb Table!A19:Q29'
     german_bombs = 'Bomb Table!A33:Q39'
@@ -58,7 +68,8 @@ async def bomb(ctx, country=None, bomb_type=None, battle_rating=None, four_base=
     french_bombs = 'Bomb Table!A119:Q125'
     swedish_bombs = 'Bomb Table!A128:Q138'
 
-    bomb_data = {"US": {}, "GERMAN": {}, "RUSSIA": {}, "BRITAIN": {}, "JAPAN": {}, "ITALY": {}, "CHINA": {}, "FRANCE": {}, "SWEDEN": {}}
+    bomb_data = {"US": {}, "GERMAN": {}, "RUSSIA": {}, "BRITAIN": {}, "JAPAN": {}, "ITALY": {}, "CHINA": {},
+                 "FRANCE": {}, "SWEDEN": {}}
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=american_bombs).execute()
     american_list = result.get('values', [])
     for items in american_list:
@@ -154,29 +165,36 @@ async def bomb(ctx, country=None, bomb_type=None, battle_rating=None, four_base=
 
         base_bombs_list = bomb_data[country.upper()][bomb_type.upper()]
 
+        if four_base is not None:
+            try:
+                four_base = int(four_base)
+            except ValueError:
+                four_base = str(four_base)
+                four_base = four_base.upper()
+
         if 1.0 <= battle_rating <= 2.0:
-            if four_base == 4:
+            if four_base == 4 or four_base == "YES":
                 base_bombs_required = base_bombs_list[2]
                 airfield_bombs_required = int(base_bombs_required) * 5
             else:
                 base_bombs_required = base_bombs_list[3]
                 airfield_bombs_required = int(base_bombs_required) * 5
         elif 2.3 <= battle_rating <= 3.3:
-            if four_base == 4:
+            if four_base == 4 or four_base == "YES":
                 base_bombs_required = base_bombs_list[4]
                 airfield_bombs_required = int(base_bombs_required) * 6
             else:
                 base_bombs_required = base_bombs_list[5]
                 airfield_bombs_required = int(base_bombs_required) * 6
         elif 3.7 <= battle_rating <= 4.7:
-            if four_base == 4:
+            if four_base == 4 or four_base == "YES":
                 base_bombs_required = base_bombs_list[6]
                 airfield_bombs_required = int(base_bombs_required) * 8
             else:
                 base_bombs_required = base_bombs_list[7]
                 airfield_bombs_required = int(base_bombs_required) * 8
         elif 5.0 <= battle_rating:
-            if four_base == 4:
+            if four_base == 4 or four_base == "YES":
                 base_bombs_required = base_bombs_list[8]
                 airfield_bombs_required = int(base_bombs_required) * 15
             else:
