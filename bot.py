@@ -2,16 +2,25 @@
 import os.path
 import random
 import pickle
-# import logging
+import logging
 from discord import Intents
 from discord.ext import commands
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
+# "Typical" logging.
 # logging.basicConfig(level=logging.DEBUG, filename='logs.txt')
 # logger = logging.getLogger(__name__)
 # logger.debug('test')
+
+# Discord correct logging.
+# logger = logging.getLogger('discord')
+# logger.setLevel(logging.DEBUG)
+# handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+# handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+# logger.addHandler(handler)
+
 
 TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
 SPREADSHEET_ID = '1S-AIIx2EQrLX8RHJr_AVIGPsQjehEdfUmbwKyinOs_I'
@@ -165,50 +174,53 @@ async def bomb(ctx, country=None, bomb_type=None, battle_rating=None, four_base=
 
         base_bombs_list = bomb_data[country.upper()][bomb_type.upper()]
 
-        if four_base is not None:
-            try:
-                four_base = int(four_base)
-            except ValueError:
-                four_base = str(four_base)
-                four_base = four_base.upper()
+        try:
+            if four_base is not None:
+                try:
+                    four_base = int(four_base)
+                except ValueError:
+                    four_base = str(four_base)
+                    four_base = four_base.upper()
 
-        if 1.0 <= battle_rating <= 2.0:
-            if four_base == 4 or four_base == "YES":
-                base_bombs_required = base_bombs_list[2]
-                airfield_bombs_required = int(base_bombs_required) * 5
+            if 1.0 <= battle_rating <= 2.0:
+                if four_base == 4 or four_base == "YES":
+                    base_bombs_required = base_bombs_list[2]
+                    airfield_bombs_required = int(base_bombs_required) * 5
+                else:
+                    base_bombs_required = base_bombs_list[3]
+                    airfield_bombs_required = int(base_bombs_required) * 5
+            elif 2.3 <= battle_rating <= 3.3:
+                if four_base == 4 or four_base == "YES":
+                    base_bombs_required = base_bombs_list[4]
+                    airfield_bombs_required = int(base_bombs_required) * 6
+                else:
+                    base_bombs_required = base_bombs_list[5]
+                    airfield_bombs_required = int(base_bombs_required) * 6
+            elif 3.7 <= battle_rating <= 4.7:
+                if four_base == 4 or four_base == "YES":
+                    base_bombs_required = base_bombs_list[6]
+                    airfield_bombs_required = int(base_bombs_required) * 8
+                else:
+                    base_bombs_required = base_bombs_list[7]
+                    airfield_bombs_required = int(base_bombs_required) * 8
+            elif 5.0 <= battle_rating:
+                if four_base == 4 or four_base == "YES":
+                    base_bombs_required = base_bombs_list[8]
+                    airfield_bombs_required = int(base_bombs_required) * 15
+                else:
+                    base_bombs_required = base_bombs_list[9]
+                    airfield_bombs_required = int(base_bombs_required) * 15
             else:
-                base_bombs_required = base_bombs_list[3]
-                airfield_bombs_required = int(base_bombs_required) * 5
-        elif 2.3 <= battle_rating <= 3.3:
-            if four_base == 4 or four_base == "YES":
-                base_bombs_required = base_bombs_list[4]
-                airfield_bombs_required = int(base_bombs_required) * 6
-            else:
-                base_bombs_required = base_bombs_list[5]
-                airfield_bombs_required = int(base_bombs_required) * 6
-        elif 3.7 <= battle_rating <= 4.7:
-            if four_base == 4 or four_base == "YES":
-                base_bombs_required = base_bombs_list[6]
-                airfield_bombs_required = int(base_bombs_required) * 8
-            else:
-                base_bombs_required = base_bombs_list[7]
-                airfield_bombs_required = int(base_bombs_required) * 8
-        elif 5.0 <= battle_rating:
-            if four_base == 4 or four_base == "YES":
-                base_bombs_required = base_bombs_list[8]
-                airfield_bombs_required = int(base_bombs_required) * 15
-            else:
-                base_bombs_required = base_bombs_list[9]
-                airfield_bombs_required = int(base_bombs_required) * 15
-        else:
+                return
+        except ValueError:
+            await ctx.send("This bomb data hasn't been added to the spreadsheet yet. If you are requesting a 4 base "
+                           "map, it may be too soon. Please refer to 3 base map data and multiply it by 2x for each "
+                           "base to get approximate 4 base data.")
             return
 
-        if base_bombs_required == 0:
-            await ctx.send("This bomb data is unavailable.")
-        else:
-            await ctx.send(
-                f"Bombs Required for Bases: {base_bombs_required} \nBombs Required for Airfield: "
-                f"{airfield_bombs_required}")
+        await ctx.send(
+            f"Bombs Required for Bases: {base_bombs_required} \nBombs Required for Airfield: "
+            f"{airfield_bombs_required}")
 
     except Exception as e:
         await ctx.send("User error, try again.")
