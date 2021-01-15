@@ -50,9 +50,6 @@ sheet = service.spreadsheets()
 async def on_ready():
     print("Bot is ready.")
     print(f"Total servers: {len(bot.guilds)}")
-    print("Server names:")
-    for guild in bot.guilds:
-        print(guild.name)
 
 
 @bot.command(name='rolldice', help='Simulates rolling dice.')
