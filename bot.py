@@ -152,6 +152,9 @@ async def test_bomb(ctx):
                 await ctx.send("Please use a number.")
                 continue
             break
+        else:
+            await ctx.send("You didn't use a number. Goodbye.")
+            return
 
         if country_number == 1:
             country = countries[0]
@@ -264,6 +267,9 @@ async def test_bomb(ctx):
                 await ctx.send("Please use a number.")
                 continue
             break
+        else:
+            await ctx.send("You didn't use a number. Goodbye.")
+            return
 
         for x in range(len(bomb_data[country])):
             if bomb_number == x:
