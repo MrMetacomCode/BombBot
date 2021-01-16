@@ -144,10 +144,16 @@ async def test_bomb(ctx):
         def check(message):
             return message.author == ctx.author and message.channel == ctx.channel
 
-        try:
-            country_number = int((await bot.wait_for('message', check=check)).content)
-        except ValueError:
-            await ctx.send("Please use a number.")
+        for x in range(5):
+            country_number = (await bot.wait_for('message', check=check)).content
+            try:
+                country_number = int(country_number)
+            except ValueError:
+                await ctx.send("Please use a number.")
+                continue
+            break
+        else:
+            await ctx.send("You didn't use a number. Goodbye.")
             return
 
         if country_number == 1:
@@ -253,10 +259,16 @@ async def test_bomb(ctx):
             await ctx.send("Couldn't find that country's bombs.")
             return
 
-        try:
-            bomb_number = int((await bot.wait_for('message', check=check)).content)
-        except ValueError:
-            await ctx.send("Please use a number.")
+        for x in range(5):
+            bomb_number = (await bot.wait_for('message', check=check)).content
+            try:
+                bomb_number = int(bomb_number)
+            except ValueError:
+                await ctx.send("Please use a number.")
+                continue
+            break
+        else:
+            await ctx.send("You didn't use a number. Goodbye.")
             return
 
         for x in range(len(bomb_data[country])):
