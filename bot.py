@@ -60,6 +60,14 @@ async def roll(ctx, number_of_dice: int, number_of_sides: int):
     ]
     await ctx.send(', '.join(dice))
 
+def embed_maker(thing_list):
+    list_number = 1
+    embed = ""
+    for thing in thing_list:
+        item = f"{list_number} = {thing}\n"
+        embed += item
+        list_number += 1
+    return embed
 
 @bot.command(name='bombs', aliases=['bomb'], help='For War Thunder game. Finds bombs from spreadsheet and returns '
                                                       'bombs required to destroy a base and bombs required to destroy '
@@ -127,7 +135,7 @@ async def bomb(ctx):
         for country_number in bomb_data:
             countries.append(country_number)
 
-        countries_embed = self.embed_maker(countries)
+        countries_embed = embed_maker(countries)
 
         embedvar = discord.Embed(title="Select a country to view bombs from:",
                                  description=countries_embed,
@@ -155,7 +163,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[0]]:
                 bombs.append(bomb_)
 
-            american_bombs_embed = self.embed_maker(bombs)
+            american_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {country}:",
                                      description=american_bombs_embed,
                                      color=0x00ff00)
@@ -166,7 +174,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[1]]:
                 bombs.append(bomb_)
 
-            german_bombs_embed = self.embed_maker(bombs)
+            german_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {countries[1]}:",
                                      description=german_bombs_embed,
                                      color=0x00ff00)
@@ -177,7 +185,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[2]]:
                 bombs.append(bomb_)
 
-            russian_bombs_embed = self.embed_maker(bombs)
+            russian_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {countries[2]}:",
                                      description=russian_bombs_embed,
                                      color=0x00ff00)
@@ -188,7 +196,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[3]]:
                 bombs.append(bomb_)
 
-            british_bombs_embed = self.embed_maker(bombs)
+            british_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {countries[3]}:",
                                      description=british_bombs_embed,
                                      color=0x00ff00)
@@ -199,7 +207,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[4]]:
                 bombs.append(bomb_)
 
-            japanese_bombs_embed = self.embed_maker(bombs)
+            japanese_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {countries[4]}:",
                                      description=japanese_bombs_embed,
                                      color=0x00ff00)
@@ -210,7 +218,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[5]]:
                 bombs.append(bomb_)
 
-            italian_bombs_embed = self.embed_maker(bombs)
+            italian_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {countries[5]}:",
                                      description=italian_bombs_embed,
                                      color=0x00ff00)
@@ -221,7 +229,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[6]]:
                 bombs.append(bomb_)
 
-            chinese_bombs_embed = self.embed_maker(bombs)
+            chinese_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {countries[6]}:",
                                      description=chinese_bombs_embed,
                                      color=0x00ff00)
@@ -232,7 +240,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[7]]:
                 bombs.append(bomb_)
 
-            france_bombs_embed = self.embed_maker(bombs)
+            france_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {countries[7]}:",
                                      description=france_bombs_embed,
                                      color=0x00ff00)
@@ -243,7 +251,7 @@ async def bomb(ctx):
             for bomb_ in bomb_data[countries[8]]:
                 bombs.append(bomb_)
 
-            sweden_bombs_embed = self.embed_maker(bombs)
+            sweden_bombs_embed = embed_maker(bombs)
             embedvar = discord.Embed(title=f"Select a bomb from {countries[8]}:",
                                      description=sweden_bombs_embed,
                                      color=0x00ff00)
