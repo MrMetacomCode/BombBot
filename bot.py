@@ -46,16 +46,11 @@ service = build('sheets', 'v4', credentials=creds)
 sheet = service.spreadsheets()
 
 
-@tasks.loop(minutes=5)
-async def changestatus():
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.custom, name="$help bombs"))
-
-
 @bot.event
 async def on_ready():
     print("Bot is ready.")
     print(f"Total servers: {len(bot.guilds)}")
-    changestatus.start()
+    await bot.change_presence(activity=discord.Game("$bombs"))
 
 
 @bot.command(name='rolldice', help='Simulates rolling dice.')
