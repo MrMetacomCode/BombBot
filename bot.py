@@ -5,7 +5,7 @@ import random
 import pickle
 import logging
 from discord import Intents
-from discord.ext import commands
+from discord.ext import commands, tasks
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -46,10 +46,16 @@ service = build('sheets', 'v4', credentials=creds)
 sheet = service.spreadsheets()
 
 
+@tasks.loop(minutes=5)
+async def changestatus():
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.custom, name="$help bombs"))
+
+
 @bot.event
 async def on_ready():
     print("Bot is ready.")
     print(f"Total servers: {len(bot.guilds)}")
+    changestatus.start()
 
 
 @bot.command(name='rolldice', help='Simulates rolling dice.')
@@ -60,6 +66,7 @@ async def roll(ctx, number_of_dice: int, number_of_sides: int):
     ]
     await ctx.send(', '.join(dice))
 
+
 def embed_maker(thing_list):
     list_number = 1
     embed = ""
@@ -69,9 +76,10 @@ def embed_maker(thing_list):
         list_number += 1
     return embed
 
+
 @bot.command(name='bombs', aliases=['bomb'], help='For War Thunder game. Finds bombs from spreadsheet and returns '
-                                                      'bombs required to destroy a base and bombs required to destroy '
-                                                      'an airfield.')
+                                                  'bombs required to destroy a base and bombs required to destroy '
+                                                  'an airfield.')
 async def bomb(ctx):
     american_bombs = 'Bomb Table!B19:Q29'
     german_bombs = 'Bomb Table!B33:Q39'
