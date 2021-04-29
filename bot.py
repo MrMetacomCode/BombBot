@@ -29,7 +29,7 @@ SPREADSHEET_ID = '1S-AIIx2EQrLX8RHJr_AVIGPsQjehEdfUmbwKyinOs_I'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 intents = Intents.all()
-bot = commands.Bot(command_prefix='&', intents=intents)
+bot = commands.Bot(command_prefix='$', intents=intents)
 
 creds = None
 if os.path.exists('token.pickle'):
