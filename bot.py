@@ -1,4 +1,5 @@
 # import os
+import json
 import os.path
 import discord
 import random
@@ -28,7 +29,7 @@ SPREADSHEET_ID = '1S-AIIx2EQrLX8RHJr_AVIGPsQjehEdfUmbwKyinOs_I'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 intents = Intents.all()
-bot = commands.Bot(command_prefix='$', intents=intents)
+bot = commands.Bot(command_prefix='&', intents=intents)
 
 creds = None
 if os.path.exists('token.pickle'):
@@ -50,6 +51,12 @@ sheet = service.spreadsheets()
 async def on_ready():
     print("Bot is ready.")
     print(f"Total servers: {len(bot.guilds)}")
+    members_set = set()
+    for guild in bot.guilds:
+        for member in guild.members:
+            members_set.add(member)
+    members = len(members_set)
+    print(f"Total members from all servers: {members}")
     await bot.change_presence(activity=discord.Game("$bombs"))
 
 
@@ -76,6 +83,8 @@ def embed_maker(thing_list):
                                                   'bombs required to destroy a base and bombs required to destroy '
                                                   'an airfield.')
 async def bomb(ctx):
+    with open('count.json', 'r') as file:
+        count_file = json.loads(file.read())
     american_bombs = 'Bomb Table!B19:Q29'
     german_bombs = 'Bomb Table!B33:Q39'
     russian_bombs = 'Bomb Table!B43:Q54'
@@ -347,6 +356,21 @@ async def bomb(ctx):
         await ctx.send("User error, try again.")
         raise e
 
+    count = int(count_file["count"])
+    new_count = count + 1
+    count_file["count"] = new_count
+
+    with open('count.json', 'w') as file:
+        file.write(json.dumps(count_file))
+
+
+@bot.command(name='count', help='Displays number of times $bombs has been called.')
+async def count_output(ctx):
+    with open('count.json', 'r') as file:
+        count_file = json.loads(file.read())
+
+    count_ = int(count_file["count"])
+    await ctx.send(f"$bombs has been called a total of {count_} times.")
 
 print("Server Running")
 
