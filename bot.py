@@ -1,3 +1,4 @@
+# Importing everything needed.
 # import os
 import json
 import os.path
@@ -24,13 +25,16 @@ from google.auth.transport.requests import Request
 # logger.addHandler(handler)
 
 
+# Security variables.
 TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
 SPREADSHEET_ID = '1S-AIIx2EQrLX8RHJr_AVIGPsQjehEdfUmbwKyinOs_I'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
+# Setting up intents and initializing bot.
 intents = Intents.all()
 bot = commands.Bot(command_prefix='$', intents=intents)
 
+# Setup for Google Spreadsheet to be able to pull from it.
 creds = None
 if os.path.exists('token.pickle'):
     with open('token.pickle', 'rb') as token:
@@ -47,6 +51,7 @@ service = build('sheets', 'v4', credentials=creds)
 sheet = service.spreadsheets()
 
 
+# On_Ready event that displays useful information when first run.
 @bot.event
 async def on_ready():
     print("Bot is ready.")
@@ -60,6 +65,7 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game("$bombs"))
 
 
+# Fun dice rolling game.
 @bot.command(name='rolldice', help='Simulates rolling dice.')
 async def roll(ctx, number_of_dice: int, number_of_sides: int):
     dice = [
@@ -69,6 +75,7 @@ async def roll(ctx, number_of_dice: int, number_of_sides: int):
     await ctx.send(', '.join(dice))
 
 
+# Helper function that turns lists into numbered strings with line breaks.
 def embed_maker(thing_list):
     list_number = 1
     embed = ""
@@ -79,10 +86,12 @@ def embed_maker(thing_list):
     return embed
 
 
+# Command that returns bombs needed for bases and airfield.
 @bot.command(name='bombs', aliases=['bomb'], help='For War Thunder game. Finds bombs from spreadsheet and returns '
                                                   'bombs required to destroy a base and bombs required to destroy '
                                                   'an airfield.')
 async def bomb(ctx):
+    # Defining country data ranges from the spreadsheet.
     with open('count.json', 'r') as file:
         count_file = json.loads(file.read())
     american_bombs = 'Bomb Table!B19:Q29'
@@ -95,80 +104,102 @@ async def bomb(ctx):
     french_bombs = 'Bomb Table!B119:Q125'
     swedish_bombs = 'Bomb Table!B128:Q138'
 
+    # Setting up a dict to hold each country's bomb data.
     bomb_data = {"US": {}, "GERMAN": {}, "RUSSIA": {}, "BRITAIN": {}, "JAPAN": {}, "ITALY": {}, "CHINA": {},
                  "FRANCE": {}, "SWEDEN": {}}
+
+    # Adds American bomb data to the bomb_data dict.
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=american_bombs).execute()
     american_list = result.get('values', [])
     for items in american_list:
         bomb_data["US"][items[0]] = items[1:]
 
+    # Adds German bomb data to the bomb_data dict
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=german_bombs).execute()
     german_list = result.get('values', [])
     for items in german_list:
         bomb_data["GERMAN"][items[0]] = items[1:]
 
+    # Adds Russian bomb data to the bomb_data dict
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=russian_bombs).execute()
     russian_list = result.get('values', [])
     for items in russian_list:
         bomb_data["RUSSIA"][items[0]] = items[1:]
 
+    # Adds Britain bomb data to the bomb_data dict
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=british_bombs).execute()
     british_list = result.get('values', [])
     for items in british_list:
         bomb_data["BRITAIN"][items[0]] = items[1:]
 
+    # Adds Japanese bomb data to the bomb_data dict
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=japanese_bombs).execute()
     japanese_list = result.get('values', [])
     for items in japanese_list:
         bomb_data["JAPAN"][items[0]] = items[1:]
 
+    # Adds Italian bomb data to the bomb_data dict
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=italian_bombs).execute()
     italian_list = result.get('values', [])
     for items in italian_list:
         bomb_data["ITALY"][items[0]] = items[1:]
 
+    # Adds Chinese bomb data to the bomb_data dict
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=chinese_bombs).execute()
     chinese_list = result.get('values', [])
     for items in chinese_list:
         bomb_data["CHINA"][items[0]] = items[1:]
 
+    # Adds French bomb data to the bomb_data dict
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=french_bombs).execute()
     french_list = result.get('values', [])
     for items in french_list:
         bomb_data["FRANCE"][items[0]] = items[1:]
 
+    # Adds Swedish bomb data to the bomb_data dict
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=swedish_bombs).execute()
     swedish_list = result.get('values', [])
     for items in swedish_list:
         bomb_data["SWEDEN"][items[0]] = items[1:]
 
     try:
+        # Creates a list of the countries.
         countries = []
         for country_number in bomb_data:
             countries.append(country_number)
 
+        # Uses the helper function to make a numbered list of the countries.
         countries_embed = embed_maker(countries)
 
+        # Makes an embed and sends it.
         embedvar = discord.Embed(title="Select a country to view bombs from:",
                                  description=countries_embed,
                                  color=0x00ff00)
         await ctx.send(embed=embedvar)
 
+        # Checks to see if the user has replied
         def check(message):
             return message.author == ctx.author and message.channel == ctx.channel
 
+        # Gives the user 5 tries to enter a number
         for x in range(5):
+            # Gets the input from the user
             country_number = (await bot.wait_for('message', check=check)).content
+            # Tries to convert it to an integer
             try:
                 country_number = int(country_number)
+            # If the user didn't enter a number this will tell them to and go back to the top of the loop
             except ValueError:
                 await ctx.send("Please use a number.")
                 continue
+            # If the user entered a number it will break from the loop and continue with the rest of the code
             break
         else:
+            # If the user doesn't enter a number in 5 tries, end the command sequence
             await ctx.send("You didn't use a number. Goodbye.")
             return
 
+        # Lot of if statements to check which country they chose. I need to make this more efficient
         if country_number == 1:
             country = countries[0]
             bombs = []
@@ -269,9 +300,11 @@ async def bomb(ctx):
                                      color=0x00ff00)
             await ctx.send(embed=embedvar)
         else:
+            # If they choose a number that isn't listed it tells the user and ends the command sequence
             await ctx.send("Couldn't find that country's bombs.")
             return
 
+        # Again gives the user 5 tries to enter a number
         for x in range(5):
             bomb_number = (await bot.wait_for('message', check=check)).content
             try:
@@ -284,31 +317,44 @@ async def bomb(ctx):
             await ctx.send("You didn't use a number. Goodbye.")
             return
 
+        # Loop to figure out which number and corresponding bomb was selected
         for x in range(len(bomb_data[country]) + 1):
             if bomb_number == x:
                 bomb_type = bombs[x - 1]
 
+        # Asks the user to enter the battle rating of their match
         await ctx.send("Enter battle rating:")
-        try:
-            battle_rating = float((await bot.wait_for('message', check=check)).content)
-        except ValueError:
-            await ctx.send("Please use a decimal number.")
+        for x in range(5):
+            battle_rating = (await bot.wait_for('message', check=check)).content
+            try:
+                battle_rating = float(battle_rating)
+            except ValueError:
+                await ctx.send("Please use a decimal number. If it is a whole number just put it as 4.0 for example.")
+                continue
+            break
+        else:
+            await ctx.send("You didn't use a decimal. Goodbye.")
             return
 
+        # Asks the user if the map has four bases
         await ctx.send("Is this a four base map? Enter 'YES' or 'NO'")
-        try:
-            four_base = str((await bot.wait_for('message', check=check)).content)
-        except ValueError:
-            await ctx.send("Please enter 'YES' or 'NO'.")
+        for x in range(5):
+            four_base = (await bot.wait_for('message', check=check)).content
+            try:
+                four_base = str(four_base)
+            except ValueError:
+                await ctx.send("Please enter 'YES' or 'NO'.")
+                continue
+            break
+        else:
+            await ctx.send("You didn't enter 'YES' or 'NO'. Goodbye.")
             return
 
+        # Creates a list of the data needed to destroy a base using the country and bomb type
         base_bombs_list = bomb_data[country][bomb_type]
 
-        try:
-            four_base = int(four_base)
-        except ValueError:
-            four_base = str(four_base)
-            four_base = four_base.upper()
+        four_base = four_base.upper()
+        # Using the battle_rating and four_base variables calculates bombs needed for bases and airfield
         try:
             if 1.0 <= battle_rating <= 2.0:
                 if four_base == "YES":
@@ -339,8 +385,10 @@ async def bomb(ctx):
                     base_bombs_required = base_bombs_list[9]
                     airfield_bombs_required = int(base_bombs_required) * 15
             else:
+                # Will only send if the user enters a negative battle rating
                 await ctx.send("That battle rating doesn't exist.")
                 return
+        # If there isn't any data in the cell then it will return this error, which means the data hasn't been added yet
         except ValueError:
             await ctx.send(
                 "This bomb data hasn't been added to the spreadsheet yet. If you are requesting a 4 base "
@@ -348,10 +396,12 @@ async def bomb(ctx):
                 "base to get approximate 4 base data.")
             return
 
+        # If everything works it send how many bombs per base and airfield
         await ctx.send(
             f"Bombs Required for Bases: {base_bombs_required} \nBombs Required for Airfield: "
             f"{airfield_bombs_required}")
 
+    # If something breaks in all that then it will send this message
     except Exception as e:
         await ctx.send("User error, try again.")
         raise e
