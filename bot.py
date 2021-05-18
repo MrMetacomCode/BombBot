@@ -6,11 +6,14 @@ import discord
 import random
 import pickle
 import logging
+from datetime import date
 from discord import Intents
 from discord.ext import commands, tasks
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # "Typical" logging.
 # logging.basicConfig(level=logging.DEBUG, filename='logs.txt')
@@ -28,7 +31,9 @@ from google.auth.transport.requests import Request
 # Security variables.
 TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
 SPREADSHEET_ID = '1S-AIIx2EQrLX8RHJr_AVIGPsQjehEdfUmbwKyinOs_I'
+TRACKING_SPREADSHEET_ID = '1HhomUgsgjhWWg67M54ZY_RP2l2Ns7LiDCszRJE9XMgQ'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+value_input_option = "USER_ENTERED"
 
 # Setting up intents and initializing bot.
 intents = Intents.all()
@@ -51,6 +56,42 @@ service = build('sheets', 'v4', credentials=creds)
 sheet = service.spreadsheets()
 
 
+# Updates values to the given input range on the given spreadsheet.
+def update_values(input_range, updated_values, spreadsheet_id):
+    request = sheet.values().update(spreadsheetId=spreadsheet_id, range=input_range,
+                                    valueInputOption=value_input_option,
+                                    body={"values": updated_values}).execute()
+    values = input_range.split("!")
+    values_ = values[1]
+    print(f"Values {values_} updated.")
+
+
+# Reads the values of the given input range from the given spreadsheet.
+def read_values(input_range, spreadsheet_id):
+    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=input_range).execute()
+    values = result.get('values', [])
+    return values
+
+
+# Updates the tracking spreadsheet with the new $bombs command count.
+async def func():
+    await bot.wait_until_ready()
+    # Opens count.json and gets the amount of times $bombs has been called so far.
+    with open('count.json', 'r') as file:
+        count_file = json.loads(file.read())
+    new_amount = count_file["count"]
+    # Gets the current values in column A to determine where the next date should be placed.
+    current_values = read_values("Sheet1!A1:A1095", TRACKING_SPREADSHEET_ID)
+    next_range = f"Sheet1!A{len(current_values) + 1}:B{len(current_values) + 1}"
+
+    # Gets the current date and creates a list with the new values to be sent to the sheet.
+    now = date.today()
+    todays_date = f"{now.month}/{now.day}/{now.year}"
+    new_value = [todays_date, new_amount]
+    # Updates the sheet.
+    update_values(next_range, new_value, TRACKING_SPREADSHEET_ID)
+
+
 # On_Ready event that displays useful information when first run.
 @bot.event
 async def on_ready():
@@ -63,6 +104,11 @@ async def on_ready():
     members = len(members_set)
     print(f"Total members from all servers: {members}")
     await bot.change_presence(activity=discord.Game("$bombs"))
+
+    # Runs the function to report the amount of times $bombs has been called today.
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(func, CronTrigger(hour=23, minute=59, second=0))
+    scheduler.start()
 
 
 # Fun dice rolling game.
@@ -421,6 +467,7 @@ async def count_output(ctx):
 
     count_ = int(count_file["count"])
     await ctx.send(f"$bombs has been called a total of {count_} times.")
+
 
 print("Server Running")
 
