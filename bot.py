@@ -87,7 +87,7 @@ async def func():
     # Gets the current date and creates a list with the new values to be sent to the sheet.
     now = date.today()
     todays_date = f"{now.month}/{now.day}/{now.year}"
-    new_value = [todays_date, new_amount]
+    new_value = [[todays_date, new_amount]]
     # Updates the sheet.
     update_values(next_range, new_value, TRACKING_SPREADSHEET_ID)
 
