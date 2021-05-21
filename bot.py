@@ -106,7 +106,7 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game("$bombs"))
 
     # Runs the function to report the amount of times $bombs has been called today.
-    scheduler = AsyncIOScheduler(tzlocal="CDT")
+    scheduler = AsyncIOScheduler()
     scheduler.add_job(func, CronTrigger(hour=23, minute=59, second=0))
     scheduler.start()
 
