@@ -154,59 +154,22 @@ async def bomb(ctx):
     bomb_data = {"US": {}, "GERMAN": {}, "RUSSIA": {}, "BRITAIN": {}, "JAPAN": {}, "ITALY": {}, "CHINA": {},
                  "FRANCE": {}, "SWEDEN": {}}
 
-    # Adds American bomb data to the bomb_data dict.
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=american_bombs).execute()
-    american_list = result.get('values', [])
-    for items in american_list:
-        bomb_data["US"][items[0]] = items[1:]
+    def get_bomb_data(bombs, country_abbreviation):
+        result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=bombs).execute()
+        country_list = result.get('values', [])
+        for items in country_list:
+            bomb_data[country_abbreviation][items[0]] = items[1:]
 
-    # Adds German bomb data to the bomb_data dict
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=german_bombs).execute()
-    german_list = result.get('values', [])
-    for items in german_list:
-        bomb_data["GERMAN"][items[0]] = items[1:]
-
-    # Adds Russian bomb data to the bomb_data dict
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=russian_bombs).execute()
-    russian_list = result.get('values', [])
-    for items in russian_list:
-        bomb_data["RUSSIA"][items[0]] = items[1:]
-
-    # Adds Britain bomb data to the bomb_data dict
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=british_bombs).execute()
-    british_list = result.get('values', [])
-    for items in british_list:
-        bomb_data["BRITAIN"][items[0]] = items[1:]
-
-    # Adds Japanese bomb data to the bomb_data dict
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=japanese_bombs).execute()
-    japanese_list = result.get('values', [])
-    for items in japanese_list:
-        bomb_data["JAPAN"][items[0]] = items[1:]
-
-    # Adds Italian bomb data to the bomb_data dict
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=italian_bombs).execute()
-    italian_list = result.get('values', [])
-    for items in italian_list:
-        bomb_data["ITALY"][items[0]] = items[1:]
-
-    # Adds Chinese bomb data to the bomb_data dict
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=chinese_bombs).execute()
-    chinese_list = result.get('values', [])
-    for items in chinese_list:
-        bomb_data["CHINA"][items[0]] = items[1:]
-
-    # Adds French bomb data to the bomb_data dict
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=french_bombs).execute()
-    french_list = result.get('values', [])
-    for items in french_list:
-        bomb_data["FRANCE"][items[0]] = items[1:]
-
-    # Adds Swedish bomb data to the bomb_data dict
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=swedish_bombs).execute()
-    swedish_list = result.get('values', [])
-    for items in swedish_list:
-        bomb_data["SWEDEN"][items[0]] = items[1:]
+    # Adds each country's bomb data to the bomb_data dict.
+    get_bomb_data(american_bombs, "US")
+    get_bomb_data(german_bombs, "GERMAN")
+    get_bomb_data(russian_bombs, "RUSSIA")
+    get_bomb_data(british_bombs, "BRITAIN")
+    get_bomb_data(japanese_bombs, "JAPAN")
+    get_bomb_data(italian_bombs, "ITALY")
+    get_bomb_data(chinese_bombs, "CHINA")
+    get_bomb_data(french_bombs, "FRANCE")
+    get_bomb_data(swedish_bombs, "SWEDEN")
 
     try:
         # Creates a list of the countries.
@@ -245,110 +208,23 @@ async def bomb(ctx):
             await ctx.send("You didn't use a number. Goodbye.")
             return
 
-        # Lot of if statements to check which country they chose. I need to make this more efficient
-        if country_number == 1:
-            country = countries[0]
-            bombs = []
-            for bomb_ in bomb_data[countries[0]]:
-                bombs.append(bomb_)
+        for x in range(9):
+            if country_number == x + 1:
+                country = countries[x]
+                bombs = []
+                for bomb_ in bomb_data[countries[x]]:
+                    bombs.append(bomb_)
 
-            american_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {country}:",
-                                     description=american_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        elif country_number == 2:
-            country = countries[1]
-            bombs = []
-            for bomb_ in bomb_data[countries[1]]:
-                bombs.append(bomb_)
-
-            german_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {countries[1]}:",
-                                     description=german_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        elif country_number == 3:
-            country = countries[2]
-            bombs = []
-            for bomb_ in bomb_data[countries[2]]:
-                bombs.append(bomb_)
-
-            russian_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {countries[2]}:",
-                                     description=russian_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        elif country_number == 4:
-            country = countries[3]
-            bombs = []
-            for bomb_ in bomb_data[countries[3]]:
-                bombs.append(bomb_)
-
-            british_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {countries[3]}:",
-                                     description=british_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        elif country_number == 5:
-            country = countries[4]
-            bombs = []
-            for bomb_ in bomb_data[countries[4]]:
-                bombs.append(bomb_)
-
-            japanese_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {countries[4]}:",
-                                     description=japanese_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        elif country_number == 6:
-            country = countries[5]
-            bombs = []
-            for bomb_ in bomb_data[countries[5]]:
-                bombs.append(bomb_)
-
-            italian_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {countries[5]}:",
-                                     description=italian_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        elif country_number == 7:
-            country = countries[6]
-            bombs = []
-            for bomb_ in bomb_data[countries[6]]:
-                bombs.append(bomb_)
-
-            chinese_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {countries[6]}:",
-                                     description=chinese_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        elif country_number == 8:
-            country = countries[7]
-            bombs = []
-            for bomb_ in bomb_data[countries[7]]:
-                bombs.append(bomb_)
-
-            france_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {countries[7]}:",
-                                     description=france_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        elif country_number == 9:
-            country = countries[8]
-            bombs = []
-            for bomb_ in bomb_data[countries[8]]:
-                bombs.append(bomb_)
-
-            sweden_bombs_embed = embed_maker(bombs)
-            embedvar = discord.Embed(title=f"Select a bomb from {countries[8]}:",
-                                     description=sweden_bombs_embed,
-                                     color=0x00ff00)
-            await ctx.send(embed=embedvar)
-        else:
-            # If they choose a number that isn't listed it tells the user and ends the command sequence
-            await ctx.send("Couldn't find that country's bombs.")
-            return
+                bombs_embed = embed_maker(bombs)
+                embedvar = discord.Embed(title=f"Select a bomb from {country}:",
+                                         description=bombs_embed,
+                                         color=0x00ff00)
+                await ctx.send(embed=embedvar)
+                break
+            elif x == 8:
+                # If they choose a number that isn't listed it tells the user and ends the command sequence
+                await ctx.send("Couldn't find that country's bombs.")
+                return
 
         # Again gives the user 5 tries to enter a number
         for x in range(5):
@@ -388,6 +264,8 @@ async def bomb(ctx):
             four_base = (await bot.wait_for('message', check=check)).content
             try:
                 four_base = str(four_base)
+                if four_base.lower() != "yes" and four_base.lower() != "no":
+                    raise ValueError
             except ValueError:
                 await ctx.send("Please enter 'YES' or 'NO'.")
                 continue
