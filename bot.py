@@ -105,10 +105,14 @@ async def on_ready():
     print(f"Total members from all servers: {members}")
     await bot.change_presence(activity=discord.Game("$bombs"))
 
-    # Runs the function to report the amount of times $bombs has been called today.
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(func, CronTrigger(hour=23, minute=59, second=0))
-    scheduler.start()
+    try:
+        # Runs the function to report the amount of times $bombs has been called today.
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(func, CronTrigger(hour=23, minute=59, second=0))
+        scheduler.start()
+    except Exception as e:
+        bot_commands_channel = bot.get_channel(740370208778354729)
+        await bot_commands_channel.send(f"@MrMetacom failed to write count to Google sheet. Error:\n{e}")
 
 
 # Fun dice rolling game.
@@ -327,15 +331,19 @@ async def bomb(ctx):
 
     # If something breaks in all that then it will send this message
     except Exception as e:
-        await ctx.send("User error, try again.")
+        await ctx.send(f"User error, try again. Error message:\n{e}")
         raise e
 
-    count = int(count_file["count"])
-    new_count = count + 1
-    count_file["count"] = new_count
+    try:
+        count = int(count_file["count"])
+        new_count = count + 1
+        count_file["count"] = new_count
 
-    with open('count.json', 'w') as file:
-        file.write(json.dumps(count_file))
+        with open('count.json', 'w') as file:
+            file.write(json.dumps(count_file))
+    except Exception as e:
+        bot_commands_channel = bot.get_channel(740370208778354729)
+        await bot_commands_channel.send(f"@MrMetacom failed to write count to json file. Error:\n{e}")
 
 
 @bot.command(name='count', help='Displays number of times $bombs has been called.')
@@ -348,5 +356,4 @@ async def count_output(ctx):
 
 
 print("Server Running")
-
 bot.run(TOKEN)
