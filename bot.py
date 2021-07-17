@@ -1,5 +1,4 @@
 # Importing everything needed.
-# import os
 import json
 import os.path
 import discord
@@ -7,6 +6,7 @@ import random
 import pickle
 import logging
 from datetime import date
+from datetime import datetime
 from discord import Intents
 from discord.ext import commands, tasks
 from googleapiclient.discovery import build
@@ -20,9 +20,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # logger = logging.getLogger(__name__)
 # logger.debug('test')
 
-# Discord correct logging.
+# Discord "correct" logging.
 # logger = logging.getLogger('discord')
-# logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.ERROR)
 # handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 # handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 # logger.addHandler(handler)
@@ -56,6 +56,23 @@ service = build('sheets', 'v4', credentials=creds)
 sheet = service.spreadsheets()
 
 
+# Logs exception to .txt file.
+def log_exception(e):
+    logging_file = open("log.txt", "a")
+    logging_file.write(f"{datetime.now()}\n{str(e)}\n\n")
+    logging_file.close()
+
+
+# Logs exception to .txt file and send a notification to the bot_commands channel.
+def log_exception_and_report(e):
+    logging_file = open("log.txt", "a")
+    logging_file.write(f"{datetime.now()}\n{str(e)}\n\n")
+    logging_file.close()
+
+    bot_commands_channel = bot.get_channel(740370208778354729)
+    await bot_commands_channel.send(f"@MrMetacom BombBot Error:\n{e}")
+
+
 # Updates values to the given input range on the given spreadsheet.
 def update_values(input_range, updated_values, spreadsheet_id):
     request = sheet.values().update(spreadsheetId=spreadsheet_id, range=input_range,
@@ -75,21 +92,25 @@ def read_values(input_range, spreadsheet_id):
 
 # Updates the tracking spreadsheet with the new $bombs command count.
 async def func():
-    await bot.wait_until_ready()
-    # Opens count.json and gets the amount of times $bombs has been called so far.
-    with open('count.json', 'r') as file:
-        count_file = json.loads(file.read())
-    new_amount = count_file["count"]
-    # Gets the current values in column A to determine where the next date should be placed.
-    current_values = read_values("Sheet1!A1:A1095", TRACKING_SPREADSHEET_ID)
-    next_range = f"Sheet1!A{len(current_values) + 1}:B{len(current_values) + 1}"
+    try:
+        await bot.wait_until_ready()
+        # Opens count.json and gets the amount of times $bombs has been called so far.
+        with open('count.json', 'r') as file:
+            count_file = json.loads(file.read())
+        new_amount = count_file["count"]
+        # Gets the current values in column A to determine where the next date should be placed.
+        current_values = read_values("Data!A1:A1095", TRACKING_SPREADSHEET_ID)
+        next_range = f"Data!A{len(current_values) + 1}:B{len(current_values) + 1}"
 
-    # Gets the current date and creates a list with the new values to be sent to the sheet.
-    now = date.today()
-    todays_date = f"{now.month}/{now.day}/{now.year}"
-    new_value = [[todays_date, new_amount]]
-    # Updates the sheet.
-    update_values(next_range, new_value, TRACKING_SPREADSHEET_ID)
+        # Gets the current date and creates a list with the new values to be sent to the sheet.
+        now = date.today()
+        todays_date = f"{now.month}/{now.day}/{now.year}"
+        new_value = [[todays_date, new_amount]]
+        # Updates the sheet.
+        update_values(next_range, new_value, TRACKING_SPREADSHEET_ID)
+    except Exception as e:
+        log_exception_and_report(e)
+        raise e
 
 
 # On_Ready event that displays useful information when first run.
@@ -108,11 +129,11 @@ async def on_ready():
     try:
         # Runs the function to report the amount of times $bombs has been called today.
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(func, CronTrigger(hour=23, minute=59, second=0))
+        scheduler.add_job(func, CronTrigger(hour=0, minute=0, second=0))
         scheduler.start()
     except Exception as e:
-        bot_commands_channel = bot.get_channel(740370208778354729)
-        await bot_commands_channel.send(f"@MrMetacom failed to write count to Google sheet. Error:\n{e}")
+        log_exception_and_report(e)
+        raise e
 
 
 # Fun dice rolling game.
@@ -317,7 +338,7 @@ async def bomb(ctx):
                 await ctx.send("That battle rating doesn't exist.")
                 return
         # If there isn't any data in the cell then it will return this error, which means the data hasn't been added yet
-        except ValueError:
+        except ValueError as e:
             await ctx.send(
                 "This bomb data hasn't been added to the spreadsheet yet. If you are requesting a 4 base "
                 "map, it may be too soon. Please refer to 3 base map data and multiply it by 2x for each "
@@ -331,6 +352,7 @@ async def bomb(ctx):
 
     # If something breaks in all that then it will send this message
     except Exception as e:
+        log_exception(e)
         await ctx.send(f"User error, try again. Error message:\n{e}")
         raise e
 
@@ -342,8 +364,8 @@ async def bomb(ctx):
         with open('count.json', 'w') as file:
             file.write(json.dumps(count_file))
     except Exception as e:
-        bot_commands_channel = bot.get_channel(740370208778354729)
-        await bot_commands_channel.send(f"@MrMetacom failed to write count to json file. Error:\n{e}")
+        log_exception_and_report(e)
+        raise e
 
 
 @bot.command(name='count', help='Displays number of times $bombs has been called.')
