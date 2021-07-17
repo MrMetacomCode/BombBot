@@ -64,7 +64,7 @@ def log_exception(e):
 
 
 # Logs exception to .txt file and send a notification to the bot_commands channel.
-def log_exception_and_report(e):
+async def log_exception_and_report(e):
     logging_file = open("log.txt", "a")
     logging_file.write(f"{datetime.now()}\n{str(e)}\n\n")
     logging_file.close()
