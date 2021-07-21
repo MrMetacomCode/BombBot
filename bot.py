@@ -129,7 +129,7 @@ async def on_ready():
     try:
         # Runs the function to report the amount of times $bombs has been called today.
         scheduler = AsyncIOScheduler()
-        scheduler.add_job(func, CronTrigger(hour=0, minute=0, second=0))
+        scheduler.add_job(func, CronTrigger(hour=23, minute=59, second=0))
         scheduler.start()
     except Exception as e:
         log_exception_and_report(e)
