@@ -314,11 +314,12 @@ async def bomb(ctx):
                 if "N/A" in item or "U.T." in item or "whole lotta these" in item:
                     await ctx.send(f"Answer from spreadsheet: {base_bombs_list[1]}")
                     break
-            else:
-                await ctx.send(
-                    "This bomb data hasn't been added to the spreadsheet yet. If you are requesting a 4 base "
-                    "map, it may be too soon. Please refer to 3 base map data and multiply it by 2x for each "
-                    "base to get approximate 4 base data.")
+            return
+        except TypeError as e:
+            await ctx.send(
+                "This bomb data hasn't been added to the spreadsheet yet. If you are requesting a 4 base "
+                "map, it may be too soon. Please refer to 3 base map data and multiply it by 2x for each "
+                "base to get **approximate** 4 base data.")
             return
 
         # If everything works it send how many bombs per base and airfield
