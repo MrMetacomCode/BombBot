@@ -325,7 +325,9 @@ async def bomb(ctx):
         # If everything works it send how many bombs per base and airfield
         await ctx.send(
             f"Bombs Required for Bases: {base_bombs_required} \nBombs Required for Airfield: "
-            f"{airfield_bombs_required}")
+            f"{airfield_bombs_required}"
+            f"\nHow can we make this bot better? What new features would you like to see? "
+            f"<https://forms.gle/ybTx84kKcTepzEXU8>")
 
     # If something breaks in all that then it will send this message
     except Exception as e:
