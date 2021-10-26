@@ -25,7 +25,9 @@ conn = sqlite3.connect('bombs.db')
 c = conn.cursor()
 
 # Setting up intents and initializing bot.
-intents = Intents.all()
+intents = discord.Intents(messages=True, guilds=True, bans=True, dm_messages=True, dm_reactions=True, dm_typing=True,
+                          emojis=True, guild_messages=True, guild_reactions=True, guild_typing=True, invites=True,
+                          members=True, reactions=True)
 bot = commands.Bot(command_prefix='$', intents=intents)
 
 # Setup for Google Spreadsheet to be able to pull from it.
