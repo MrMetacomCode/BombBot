@@ -11,7 +11,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-conn = sqlite3.connect('bombs.db')
+conn = sqlite3.connect('Bombs.db')
 c = conn.cursor()
 TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
 SPREADSHEET_ID = '1Ra9Ca60nwIlG_aGVS9bITjM94SJ6H5vIocl2SRVEOcM'

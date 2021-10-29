@@ -21,7 +21,7 @@ SPREADSHEET_ID = '1Ra9Ca60nwIlG_aGVS9bITjM94SJ6H5vIocl2SRVEOcM'
 TRACKING_SPREADSHEET_ID = '1HhomUgsgjhWWg67M54ZY_RP2l2Ns7LiDCszRJE9XMgQ'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 value_input_option = "USER_ENTERED"
-conn = sqlite3.connect('bombs.db')
+conn = sqlite3.connect('Bombs.db')
 c = conn.cursor()
 
 # Setting up intents and initializing bot.
