@@ -117,7 +117,7 @@ async def on_ready():
             members_set.add(member)
     members = len(members_set)
     print(f"Total members from all servers: {members}")
-    await bot.change_presence(activity=discord.Game("$bombs"))
+    await bot.change_presence(activity=discord.Game("/bombs"))
 
     try:
         # Runs the function to report the amount of times $bombs has been called today.
