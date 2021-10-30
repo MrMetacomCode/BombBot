@@ -21,8 +21,10 @@ SPREADSHEET_ID = '1Ra9Ca60nwIlG_aGVS9bITjM94SJ6H5vIocl2SRVEOcM'
 TRACKING_SPREADSHEET_ID = '1HhomUgsgjhWWg67M54ZY_RP2l2Ns7LiDCszRJE9XMgQ'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 value_input_option = "USER_ENTERED"
-conn = sqlite3.connect('Bombs.db')
-c = conn.cursor()
+bombs_conn = sqlite3.connect('Bombs.db')
+bombs_c = bombs_conn.cursor()
+ordnance_conn = sqlite3.connect('PlaneOrdnances.db')
+ordnance_c = ordnance_conn.cursor()
 
 # Setting up intents and initializing bot.
 intents = discord.Intents(messages=True, guilds=True, bans=True, dm_messages=True, dm_reactions=True, dm_typing=True,
@@ -149,13 +151,35 @@ def embed_maker(thing_list):
 
 
 def get_bomb_by_name(bomb_name, country_name):
-    c.execute(f"SELECT * FROM {country_name} WHERE bomb_name=:bomb_name", {'bomb_name': bomb_name})
-    return c.fetchall()
+    bombs_c.execute(f"SELECT * FROM {country_name} WHERE bomb_name=:bomb_name", {'bomb_name': bomb_name})
+    return bombs_c.fetchall()
 
 
 def get_bombs_by_country(country_name):
-    c.execute(f"SELECT * FROM {country_name}")
-    return c.fetchall()
+    bombs_c.execute(f"SELECT * FROM {country_name}")
+    return bombs_c.fetchall()
+
+
+def fetchall_to_list(fetchall_result):
+    items = []
+    for item in fetchall_result:
+        items.append(item[0])
+    return items
+
+
+def get_ordnances_by_plane(country_name, bomb_name):
+    ordnance_c.execute(f"SELECT PlaneName FROM {country_name} WHERE Ordnance LIKE '%{bomb_name}%'")
+    return fetchall_to_list(ordnance_c.fetchall())
+
+
+def list_to_string(item_list):
+    items_string = ""
+    for item in item_list:
+        if item == item_list[-1]:
+            items_string += f"and {item}"
+        else:
+            items_string += f"{item}, "
+    return items_string
 
 
 # Command that returns bombs needed for bases and airfield.
@@ -319,12 +343,21 @@ async def bomb(ctx):
                     "base to get **approximate** 4 base data.")
                 return
 
+            planes_with_selected_bomb = get_ordnances_by_plane(country, bomb_name)
+            planes_with_selected_bomb_string = list_to_string(planes_with_selected_bomb)
+
+            results_description = f"__Bombs Required for Bases: {base_bombs_required}__ \n__Bombs Required for Airfield: " \
+                                  f"{airfield_bombs_required}__" \
+                                  f"\n\nPlanes that can hold the {bomb_name} from {country}:" \
+                                  f"\n{planes_with_selected_bomb_string}" \
+                                  f"\n\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
+                                  f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're being reviewed as a verified bot! Thanks for all the support!"
+            embedvar = discord.Embed(title="Results",
+                                     description=results_description,
+                                     color=0x00ff00)
+
             # If everything works it send how many bombs per base and airfield
-            await ctx.interaction.followup.send(
-                f"Bombs Required for Bases: {base_bombs_required} \nBombs Required for Airfield: "
-                f"{airfield_bombs_required}"
-                f"\nHow can we make this bot better? What new features would you like to see? "
-                f"<https://forms.gle/ybTx84kKcTepzEXU8>")
+            await ctx.interaction.followup.send(embed=embedvar)
 
         # If something breaks in all that then it will send this message
         except Exception as e:
