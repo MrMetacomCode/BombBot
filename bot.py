@@ -134,7 +134,7 @@ async def roll(ctx, number_of_dice: int, number_of_sides: int):
         str(random.choice(range(1, number_of_sides + 1)))
         for _ in range(number_of_dice)
     ]
-    await ctx.send(', '.join(dice))
+    await ctx.interaction.response.send_message(', '.join(dice))
 
 
 # Helper function that turns lists into numbered strings with line breaks.
@@ -159,27 +159,21 @@ def get_bombs_by_country(country_name):
 
 
 # Command that returns bombs needed for bases and airfield.
-@bot.command(name='bombs', aliases=['bomb'], help='For War Thunder game. Finds bombs from spreadsheet and returns '
-                                                  'bombs required to destroy a base and bombs required to destroy '
-                                                  'an airfield.')
+@bot.command(name='bombs', aliases=['bomb'], help='Returns bombs to destroy base and airfield.')
 async def bomb(ctx):
     with open('count.json', 'r') as file:
         count_file = json.loads(file.read())
     try:
-        countries = ["american", "britain", "china", "french", "german", "italy", "japan", "russia", "sweden"]
-        capitalized_countries = []
-        for country in countries:
-            capitalized_country = country.capitalize()
-            capitalized_countries.append(capitalized_country)
+        countries = ["America", "Britain", "China", "France", "Germany", "Italy", "Japan", "Russia", "Sweden"]
 
         # Uses the helper function to make a numbered list of the countries.
-        countries_embed = embed_maker(capitalized_countries)
+        countries_embed = embed_maker(countries)
 
         # Makes an embed and sends it.
         embedvar = discord.Embed(title="Select a country to view bombs from:",
                                  description=countries_embed,
                                  color=0x00ff00)
-        await ctx.send(embed=embedvar)
+        await ctx.interaction.response.send_message(embed=embedvar)
 
         # Checks to see if the user has replied
         def check(message):
@@ -194,13 +188,13 @@ async def bomb(ctx):
                 country_number = int(country_number)
             # If the user didn't enter a number this will tell them to and go back to the top of the loop
             except ValueError:
-                await ctx.send("Please use a number.")
+                await ctx.interaction.followup.send("Please use a number.")
                 continue
             # If the user entered a number it will break from the loop and continue with the rest of the code
             break
         else:
             # If the user doesn't enter a number in 5 tries, end the command sequence
-            await ctx.send("You didn't use a number. Goodbye.")
+            await ctx.interaction.followup.send("You didn't use a number. Goodbye.")
             return
 
         for x in range(9):
@@ -217,11 +211,11 @@ async def bomb(ctx):
                 embedvar = discord.Embed(title=f"Select a bomb from {country}:",
                                          description=bombs_embed,
                                          color=0x00ff00)
-                await ctx.send(embed=embedvar)
+                await ctx.interaction.followup.send(embed=embedvar)
                 break
             elif x == 8:
                 # If they choose a number that isn't listed it tells the user and ends the command sequence
-                await ctx.send("Couldn't find that country's bombs.")
+                await ctx.interaction.followup.send("Couldn't find that country's bombs.")
                 return
 
         # Again gives the user 5 tries to enter a number
@@ -230,11 +224,11 @@ async def bomb(ctx):
             try:
                 bomb_number = int(bomb_number)
             except ValueError:
-                await ctx.send("Please use a number.")
+                await ctx.interaction.followup.send("Please use a number.")
                 continue
             break
         else:
-            await ctx.send("You didn't use a number. Goodbye.")
+            await ctx.interaction.followup.send("You didn't use a number. Goodbye.")
             return
 
         # Loop to figure out which number and corresponding bomb was selected
@@ -243,21 +237,21 @@ async def bomb(ctx):
                 bomb_name = bomb_names[x - 1]
 
         # Asks the user to enter the battle rating of their match
-        await ctx.send("Enter battle rating:")
+        await ctx.interaction.followup.send("Enter battle rating:")
         for x in range(5):
             battle_rating = (await bot.wait_for('message', check=check)).content
             try:
                 battle_rating = float(battle_rating)
             except ValueError:
-                await ctx.send("Please use a decimal number. If it is a whole number just put it as 4.0 for example.")
+                await ctx.interaction.followup.send("Please use a decimal number. If it is a whole number just put it as 4.0 for example.")
                 continue
             break
         else:
-            await ctx.send("You didn't use a decimal. Goodbye.")
+            await ctx.interaction.followup.send("You didn't use a decimal. Goodbye.")
             return
 
         # Asks the user if the map has four bases
-        await ctx.send("Is this a four base map? Enter 'YES' or 'NO'")
+        await ctx.interaction.followup.send("Is this a four base map? Enter 'YES' or 'NO'")
         for x in range(5):
             four_base = (await bot.wait_for('message', check=check)).content
             try:
@@ -265,11 +259,11 @@ async def bomb(ctx):
                 if four_base.lower() != "yes" and four_base.lower() != "no":
                     raise ValueError
             except ValueError:
-                await ctx.send("Please enter 'YES' or 'NO'.")
+                await ctx.interaction.followup.send("Please enter 'YES' or 'NO'.")
                 continue
             break
         else:
-            await ctx.send("You didn't enter 'YES' or 'NO'. Goodbye.")
+            await ctx.interaction.followup.send("You didn't enter 'YES' or 'NO'. Goodbye.")
             return
 
         # Creates a list of the data needed to destroy a base using the country and bomb type.
@@ -308,24 +302,24 @@ async def bomb(ctx):
                     airfield_bombs_required = int(base_bombs_required) * 15
             else:
                 # Will only send if the user enters a negative battle rating
-                await ctx.send("That battle rating doesn't exist.")
+                await ctx.interaction.followup.send("That battle rating doesn't exist.")
                 return
         # If there isn't any data in the cell then it will return this error, which means the data hasn't been added yet.
         except ValueError as e:
             for item in base_bombs_list:
                 if "N/A" in item or "U.T." in item or "whole lotta these" in item:
-                    await ctx.send(f"Answer from spreadsheet: {base_bombs_list[1]}")
+                    await ctx.interaction.followup.send(f"Answer from spreadsheet: {base_bombs_list[1]}")
                     break
             return
         except TypeError as e:
-            await ctx.send(
+            await ctx.interaction.followup.send(
                 "This bomb data hasn't been added to the spreadsheet yet. If you are requesting a 4 base "
                 "map, it may be too soon. Please refer to 3 base map data and multiply it by 2x for each "
                 "base to get **approximate** 4 base data.")
             return
 
         # If everything works it send how many bombs per base and airfield
-        await ctx.send(
+        await ctx.interaction.followup.send(
             f"Bombs Required for Bases: {base_bombs_required} \nBombs Required for Airfield: "
             f"{airfield_bombs_required}"
             f"\nHow can we make this bot better? What new features would you like to see? "
@@ -334,7 +328,7 @@ async def bomb(ctx):
     # If something breaks in all that then it will send this message
     except Exception as e:
         log_exception(e)
-        await ctx.send(f"User error, try again. Error message:\n{e}")
+        await ctx.interaction.followup.send(f"User error, try again. Error message:\n{e}")
         raise e
 
     try:
@@ -355,8 +349,16 @@ async def count_output(ctx):
         count_file = json.loads(file.read())
 
     count_ = int(count_file["count"])
-    await ctx.send(f"$bombs has been called a total of {count_} times.")
+    await ctx.interaction.response.send_message(f"$bombs has been called a total of {count_} times.")
+
+
+async def main():
+    await bot.login(TOKEN)
+    # Only uncomment if a command was added or a command name, description, args, etc. has changed.
+    await bot.register_application_commands()
+    await bot.connect()
 
 
 print("Server Running")
-bot.run(TOKEN)
+loop = bot.loop
+loop.run_until_complete(main())
