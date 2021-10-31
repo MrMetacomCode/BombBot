@@ -14,9 +14,8 @@ from google.auth.transport.requests import Request
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-
 # Security variables.
-TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
+TOKEN = os.getenv('BOMBBOT_TESTING_DISCORD_TOKEN')
 SPREADSHEET_ID = '1Ra9Ca60nwIlG_aGVS9bITjM94SJ6H5vIocl2SRVEOcM'
 TRACKING_SPREADSHEET_ID = '1HhomUgsgjhWWg67M54ZY_RP2l2Ns7LiDCszRJE9XMgQ'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -167,12 +166,58 @@ def fetchall_to_list(fetchall_result):
     return items
 
 
+def bomb_name_to_list(bomb_name_items, weight_type, weight_index):
+    weight_number = bomb_name_items[weight_index].split(weight_type)[0]
+    bomb_name_items.pop(weight_index)
+    if len(str(weight_number)) > 3:
+        weight_with_comma = f"{weight_number[0]},{weight_number[1:]}"
+        bomb_name_items.append(weight_with_comma)
+    else:
+        bomb_name_items.append(weight_number)
+    bomb_name_items.append(weight_type)
+    for item in bomb_name_items:
+        if item == " " or item == "":
+            bomb_name_items.remove(item)
+    return bomb_name_items
+
+
+def remove_duplicates_from_list(items_list):
+    return list(dict.fromkeys(items_list))
+
+
 def get_ordnances_by_plane(country_name, bomb_name):
-    ordnance_c.execute(f"SELECT PlaneName FROM {country_name} WHERE Ordnance LIKE '%{bomb_name}%'")
+    bomb_name_items = bomb_name.split(" ")
+    for index, string in enumerate(bomb_name_items):
+        if 'lb' in string and string != 'lb':
+            bomb_name_to_list(bomb_name_items, "lb", index)
+        elif 'kg' in string and string != 'kg':
+            bomb_name_to_list(bomb_name_items, "kg", index)
+        if "Mk." in string:
+            without_period_items = string.split(".")
+            bomb_name_items.pop(index)
+            for item in without_period_items:
+                if item != "":
+                    bomb_name_items.append(item)
+        if '"' in string or "(" in string:
+            bomb_name_items.pop(index)
+
+    query = ""
+    for item in bomb_name_items:
+        if item == bomb_name_items[-1]:
+            query += f"Ordnance like '%{item}%'"
+        else:
+            query += f"Ordnance like '%{item}%' AND "
+
+    if len(bomb_name_items) > 1:
+        ordnance_c.execute(f"SELECT PlaneName FROM {country_name} WHERE ({query})")
+    else:
+        ordnance_c.execute(f"SELECT PlaneName FROM {country_name} WHERE Ordnance LIKE '%{bomb_name}%'")
     return fetchall_to_list(ordnance_c.fetchall())
 
 
 def list_to_string(item_list):
+    if len(item_list) == 1:
+        return f"{item_list[0]}"
     items_string = ""
     for item in item_list:
         if item == item_list[-1]:
@@ -268,7 +313,8 @@ async def bomb(ctx):
                 try:
                     battle_rating = float(battle_rating)
                 except ValueError:
-                    await ctx.interaction.followup.send("Please use a decimal number. If it is a whole number just put it as 4.0 for example.")
+                    await ctx.interaction.followup.send(
+                        "Please use a decimal number. If it is a whole number just put it as 4.0 for example.")
                     continue
                 break
             else:
@@ -343,14 +389,16 @@ async def bomb(ctx):
                     "base to get **approximate** 4 base data.")
                 return
 
-            planes_with_selected_bomb = get_ordnances_by_plane(country, bomb_name)
+            planes_with_selected_bomb = remove_duplicates_from_list(get_ordnances_by_plane(country, bomb_name))
             planes_with_selected_bomb_string = list_to_string(planes_with_selected_bomb)
+            planes_with_selected_bomb_string = f"\nPlanes that can hold the {bomb_name} from {country}: \n{planes_with_selected_bomb_string}\n"
+            if len(planes_with_selected_bomb) == 0:
+                planes_with_selected_bomb_string = f"\nThere aren't any planes from {country} that have the {bomb_name}\n"
 
             results_description = f"__Bombs Required for Bases: {base_bombs_required}__ \n__Bombs Required for Airfield: " \
                                   f"{airfield_bombs_required}__" \
-                                  f"\n\nPlanes that can hold the {bomb_name} from {country}:" \
                                   f"\n{planes_with_selected_bomb_string}" \
-                                  f"\n\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
+                                  f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
                                   f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're being reviewed as a verified bot! Thanks for all the support!"
             embedvar = discord.Embed(title="Results",
                                      description=results_description,
@@ -376,7 +424,8 @@ async def bomb(ctx):
             await log_exception_and_report(e)
             raise e
     else:
-        await ctx.send("BombBot is now using slash commands! Simply type / and it will bring up the list of commands to use.")
+        await ctx.send(
+            "BombBot is now using slash commands! Simply type / and it will bring up the list of commands to use.")
 
 
 @bot.command(name='count', help='Displays number of times $bombs has been called.')
