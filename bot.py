@@ -186,6 +186,8 @@ def remove_duplicates_from_list(items_list):
 
 
 def get_ordnances_by_plane(country_name, bomb_name):
+    if " (" in bomb_name:
+        bomb_name = bomb_name.split(" (")[0]
     bomb_name_items = bomb_name.split(" ")
     for index, string in enumerate(bomb_name_items):
         if 'lb' in string and string != 'lb':
@@ -198,7 +200,7 @@ def get_ordnances_by_plane(country_name, bomb_name):
             for item in without_period_items:
                 if item != "":
                     bomb_name_items.append(item)
-        if '"' in string or "(" in string:
+        if '"' in string:
             bomb_name_items.pop(index)
 
     query = ""
@@ -377,10 +379,16 @@ async def bomb(ctx):
                     return
             # If there isn't any data in the cell then it will return this error, which means the data hasn't been added yet.
             except ValueError as e:
-                for item in base_bombs_list:
-                    if "N/A" in item or "U.T." in item or "whole lotta these" in item:
-                        await ctx.interaction.followup.send(f"Answer from spreadsheet: {base_bombs_list[1]}")
-                        break
+                results_string = f"Answer from spreadsheet: Unknown.\n"
+                results_description = f"\n{results_string}" \
+                                      f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
+                                      f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're being reviewed as a verified bot! Thanks for all the support!"
+                embedvar = discord.Embed(title="Results",
+                                         description=results_description,
+                                         color=0x00ff00)
+
+                # If everything works it send how many bombs per base and airfield
+                await ctx.interaction.followup.send(embed=embedvar)
                 return
             except TypeError as e:
                 await ctx.interaction.followup.send(
