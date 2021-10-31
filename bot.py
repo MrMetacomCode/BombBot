@@ -15,7 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Security variables.
-TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
+TOKEN = os.getenv('BOMBBOT_TESTING_DISCORD_TOKEN')
 SPREADSHEET_ID = '1Ra9Ca60nwIlG_aGVS9bITjM94SJ6H5vIocl2SRVEOcM'
 TRACKING_SPREADSHEET_ID = '1HhomUgsgjhWWg67M54ZY_RP2l2Ns7LiDCszRJE9XMgQ'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -166,42 +166,14 @@ def fetchall_to_list(fetchall_result):
     return items
 
 
-def bomb_name_to_list(bomb_name_items, weight_type, weight_index):
-    weight_number = bomb_name_items[weight_index].split(weight_type)[0]
-    bomb_name_items.pop(weight_index)
-    if len(str(weight_number)) > 3:
-        weight_with_comma = f"{weight_number[0]},{weight_number[1:]}"
-        bomb_name_items.append(weight_with_comma)
-    else:
-        bomb_name_items.append(weight_number)
-    bomb_name_items.append(weight_type)
-    for item in bomb_name_items:
-        if item == " " or item == "":
-            bomb_name_items.remove(item)
-    return bomb_name_items
-
-
 def remove_duplicates_from_list(items_list):
     return list(dict.fromkeys(items_list))
 
 
 def get_ordnances_by_plane(country_name, bomb_name):
-    if " (" in bomb_name:
-        bomb_name = bomb_name.split(" (")[0]
+    if "(" in bomb_name:
+        bomb_name = bomb_name.split("(")[0]
     bomb_name_items = bomb_name.split(" ")
-    for index, string in enumerate(bomb_name_items):
-        if 'lb' in string and string != 'lb':
-            bomb_name_to_list(bomb_name_items, "lb", index)
-        elif 'kg' in string and string != 'kg':
-            bomb_name_to_list(bomb_name_items, "kg", index)
-        if "Mk." in string:
-            without_period_items = string.split(".")
-            bomb_name_items.pop(index)
-            for item in without_period_items:
-                if item != "":
-                    bomb_name_items.append(item)
-        if '"' in string:
-            bomb_name_items.pop(index)
 
     query = ""
     for item in bomb_name_items:
@@ -262,6 +234,9 @@ async def bomb(ctx):
                 except ValueError:
                     await ctx.interaction.followup.send("Please use a number.")
                     continue
+                if country_number not in list(range(1, 9 + 1)):
+                    await ctx.interaction.followup.send("Please use a number that is in the list.")
+                    continue
                 # If the user entered a number it will break from the loop and continue with the rest of the code
                 break
             else:
@@ -297,6 +272,10 @@ async def bomb(ctx):
                     bomb_number = int(bomb_number)
                 except ValueError:
                     await ctx.interaction.followup.send("Please use a number.")
+                    continue
+                bomb_number_list = list(range(1, len(bomb_names) + 1))
+                if bomb_number not in list(range(1, len(bomb_names) + 1)):
+                    await ctx.interaction.followup.send("Please use a number that is in the list.")
                     continue
                 break
             else:

@@ -1,0 +1,6 @@
+1. If the weight is more than 3 digits it must have a comma (i.e., 4000 should be 4,000).
+2. Anything in parentheses cannot be in the bomb name. Make a new column for nicknames?
+3. Some bombs like the LDGP don't have a period after the Mk
+4. No. and Mo. need to be Number and Model (i.e., Navy Type No. 25 Mo. 2 should be Navy Type Number 25 Model 2).
+5. Some bomb names need dashes in certain places (i.e., FAB-1500-M46 should be FAB-1500M-46).
+6. Weight type (lb or kg) needs to be separate from the weight number (i.e., 100lb should be 100 lb) and cannot be plural.
