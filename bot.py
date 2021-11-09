@@ -2,12 +2,10 @@ import json
 import os.path
 import sqlite3
 import discord
-import random
 import pickle
 from datetime import date
 from datetime import datetime
-from discord import Intents
-from discord.ext import commands, tasks
+from discord.ext import commands
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -55,16 +53,6 @@ def log_exception(e):
     logging_file.close()
 
 
-# Logs exception to .txt file and send a notification to the bot_commands channel.
-async def log_exception_and_report(e):
-    logging_file = open("log.txt", "a")
-    logging_file.write(f"{datetime.now()}\n{str(e)}\n\n")
-    logging_file.close()
-
-    bot_commands_channel = bot.get_channel(740370208778354729)
-    await bot_commands_channel.send(f"@MrMetacom BombBot Error:\n{e}")
-
-
 # Updates values to the given input range on the given spreadsheet.
 def update_values(input_range, updated_values, spreadsheet_id):
     request = sheet.values().update(spreadsheetId=spreadsheet_id, range=input_range,
@@ -101,7 +89,7 @@ async def func():
         # Updates the sheet.
         update_values(next_range, new_value, TRACKING_SPREADSHEET_ID)
     except Exception as e:
-        log_exception_and_report(e)
+        log_exception(e)
         raise e
 
 
@@ -124,18 +112,8 @@ async def on_ready():
         scheduler.add_job(func, CronTrigger(hour=23, minute=59, second=0))
         scheduler.start()
     except Exception as e:
-        log_exception_and_report(e)
+        log_exception(e)
         raise e
-
-
-# Fun dice rolling game.
-@bot.command(name='rolldice', help='Simulates rolling dice.')
-async def roll(ctx, number_of_dice: int, number_of_sides: int):
-    dice = [
-        str(random.choice(range(1, number_of_sides + 1)))
-        for _ in range(number_of_dice)
-    ]
-    await ctx.interaction.response.send_message(', '.join(dice))
 
 
 # Helper function that turns lists into numbered strings with line breaks.
@@ -201,6 +179,24 @@ def list_to_string(item_list):
     return items_string
 
 
+def list_to_number_buttons(list_items):
+    number_buttons = []
+    for number in list(range(1, len(list_items) + 1)):
+        button = discord.ui.Button(label=str(number), custom_id=str(number))
+        number_buttons.append(button)
+    number_components = discord.ui.MessageComponents.add_buttons_with_rows(*number_buttons)
+    return number_components
+
+
+def list_to_buttons(list_items):
+    buttons = []
+    for item in list_items:
+        button = discord.ui.Button(label=str(item), custom_id=str(item))
+        buttons.append(button)
+    buttons_components = discord.ui.MessageComponents.add_buttons_with_rows(*buttons)
+    return buttons_components
+
+
 # Command that returns bombs needed for bases and airfield.
 @bot.command(name='bombs', aliases=['bomb'], help='Returns bombs to destroy base and airfield.')
 async def bomb(ctx):
@@ -217,159 +213,147 @@ async def bomb(ctx):
             embedvar = discord.Embed(title="Select a country to view bombs from:",
                                      description=countries_embed,
                                      color=0x00ff00)
-            await ctx.interaction.response.send_message(embed=embedvar)
+            country_number_components = list_to_number_buttons(countries)
+            await ctx.interaction.response.send_message(embed=embedvar, components=country_number_components)
 
-            # Checks to see if the user has replied
-            def check(message):
-                return message.author == ctx.author and message.channel == ctx.channel
+            country_choice_message = await ctx.interaction.original_message()
 
-            # Gives the user 5 tries to enter a number
-            for x in range(5):
-                # Gets the input from the user
-                country_number = (await bot.wait_for('message', check=check)).content
-                # Tries to convert it to an integer
-                try:
-                    country_number = int(country_number)
-                # If the user didn't enter a number this will tell them to and go back to the top of the loop
-                except ValueError:
-                    await ctx.interaction.followup.send("Please use a number.")
-                    continue
-                if country_number not in list(range(1, 9 + 1)):
-                    await ctx.interaction.followup.send("Please use a number that is in the list.")
-                    continue
-                # If the user entered a number it will break from the loop and continue with the rest of the code
-                break
-            else:
-                # If the user doesn't enter a number in 5 tries, end the command sequence
-                await ctx.interaction.followup.send("You didn't use a number. Goodbye.")
-                return
+            def check(interaction_: discord.Interaction):
+                if interaction_.user != ctx.author:
+                    return True
+                if interaction_.message.id != country_choice_message.id:
+                    return True
+                return True
 
-            for x in range(9):
-                if country_number == x + 1:
-                    country = countries[x]
+            interaction = await bot.wait_for("component_interaction", check=check)
 
-                    bomb_values = get_bombs_by_country(country)
+            country_number_components.disable_components()
+            await interaction.response.edit_message(components=country_number_components)
 
-                    bomb_names = []
-                    for items in bomb_values:
-                        bomb_names.append(items[0])
+            country_number = int(interaction.component.custom_id)
+            country = countries[country_number - 1]
 
-                    bombs_embed = embed_maker(bomb_names)
-                    embedvar = discord.Embed(title=f"Select a bomb from {country}:",
-                                             description=bombs_embed,
-                                             color=0x00ff00)
-                    await ctx.interaction.followup.send(embed=embedvar)
-                    break
-                elif x == 8:
-                    # If they choose a number that isn't listed it tells the user and ends the command sequence
-                    await ctx.interaction.followup.send("Couldn't find that country's bombs.")
-                    return
+            bomb_values = get_bombs_by_country(country)
+            bomb_names = fetchall_to_list(bomb_values)
 
-            # Again gives the user 5 tries to enter a number
-            for x in range(5):
-                bomb_number = (await bot.wait_for('message', check=check)).content
-                try:
-                    bomb_number = int(bomb_number)
-                except ValueError:
-                    await ctx.interaction.followup.send("Please use a number.")
-                    continue
-                bomb_number_list = list(range(1, len(bomb_names) + 1))
-                if bomb_number not in list(range(1, len(bomb_names) + 1)):
-                    await ctx.interaction.followup.send("Please use a number that is in the list.")
-                    continue
-                break
-            else:
-                await ctx.interaction.followup.send("You didn't use a number. Goodbye.")
-                return
+            bombs_embed = embed_maker(bomb_names)
+            embedvar = discord.Embed(title=f"Select a bomb from {country}:",
+                                     description=bombs_embed,
+                                     color=0x00ff00)
+            bombs_numbers_components = list_to_number_buttons(bomb_names)
+            await ctx.interaction.followup.send(embed=embedvar, components=bombs_numbers_components)
 
-            # Loop to figure out which number and corresponding bomb was selected
-            for x in range(len(bomb_names) + 1):
-                if bomb_number == x:
-                    bomb_name = bomb_names[x - 1]
+            bombs_choice_message = await ctx.interaction.original_message()
 
-            # Asks the user to enter the battle rating of their match
-            await ctx.interaction.followup.send("Enter battle rating:")
-            for x in range(5):
-                battle_rating = (await bot.wait_for('message', check=check)).content
-                try:
-                    battle_rating = float(battle_rating)
-                except ValueError:
-                    await ctx.interaction.followup.send(
-                        "Please use a decimal number. If it is a whole number just put it as 4.0 for example.")
-                    continue
-                break
-            else:
-                await ctx.interaction.followup.send("You didn't use a decimal. Goodbye.")
-                return
+            def check(interaction_: discord.Interaction):
+                if interaction_.user != ctx.author:
+                    return True
+                if interaction_.message.id != bombs_choice_message.id:
+                    return True
+                return True
+
+            interaction = await bot.wait_for("component_interaction", check=check)
+
+            bombs_numbers_components.disable_components()
+            await interaction.response.edit_message(components=bombs_numbers_components)
+
+            bomb_number = int(interaction.component.custom_id)
+            bomb_name = bomb_names[bomb_number - 1]
+
+            # Asks the user to enter the battle rating of their current match.
+            battle_rating_ranges = ["1.0-2.0", "2.3-3.3", "3.7-4.7", "5.0+"]
+            battle_rating_rages_button_components = list_to_buttons(battle_rating_ranges)
+            await ctx.interaction.followup.send("Select a battle rating range:", components=battle_rating_rages_button_components)
+
+            br_choice_message = await ctx.interaction.original_message()
+
+            def check(interaction_: discord.Interaction):
+                if interaction_.user != ctx.author:
+                    return True
+                if interaction_.message.id != br_choice_message.id:
+                    return True
+                return True
+
+            interaction = await bot.wait_for("component_interaction", check=check)
+
+            battle_rating_rages_button_components.disable_components()
+            await interaction.response.edit_message(components=battle_rating_rages_button_components)
+
+            battle_rating = interaction.component.custom_id
 
             # Asks the user if the map has four bases
-            await ctx.interaction.followup.send("Is this a four base map? Enter 'YES' or 'NO'")
-            for x in range(5):
-                four_base = (await bot.wait_for('message', check=check)).content
-                try:
-                    four_base = str(four_base)
-                    if four_base.lower() != "yes" and four_base.lower() != "no":
-                        raise ValueError
-                except ValueError:
-                    await ctx.interaction.followup.send("Please enter 'YES' or 'NO'.")
-                    continue
-                break
-            else:
-                await ctx.interaction.followup.send("You didn't enter 'YES' or 'NO'. Goodbye.")
-                return
+            confirmation_components = discord.ui.MessageComponents(
+                discord.ui.ActionRow(
+                    discord.ui.Button(label="Yes", custom_id="YES"),
+                    discord.ui.Button(label="No", custom_id="NO"),
+                ),
+            )
+            await ctx.interaction.followup.send("Is this a four base map?", components=confirmation_components)
+
+            confirmation_message = await ctx.interaction.original_message()
+
+            def check(interaction_: discord.Interaction):
+                if interaction_.user != ctx.author:
+                    return True
+                if interaction_.message.id != confirmation_message.id:
+                    return True
+                return True
+
+            interaction = await bot.wait_for("component_interaction", check=check)
+
+            confirmation_components.disable_components()
+            await interaction.response.edit_message(components=confirmation_components)
+
+            four_base = interaction.component.custom_id
 
             # Creates a list of the data needed to destroy a base using the country and bomb type.
             base_bombs_list = get_bomb_by_name(bomb_name, country)[0][1:]
 
-            four_base = four_base.upper()
             # Using the battle_rating and four_base variables calculates bombs needed for bases and airfield.
             try:
-                if 1.0 <= battle_rating <= 2.0:
+                if battle_rating == "1.0-2.0":
                     if four_base == "YES":
                         base_bombs_required = base_bombs_list[0]
                         airfield_bombs_required = int(base_bombs_required) * 5
                     else:
                         base_bombs_required = base_bombs_list[1]
                         airfield_bombs_required = int(base_bombs_required) * 5
-                elif 2.3 <= battle_rating <= 3.3:
+                elif battle_rating == "2.3-3.3":
                     if four_base == "YES":
                         base_bombs_required = base_bombs_list[2]
                         airfield_bombs_required = int(base_bombs_required) * 6
                     else:
                         base_bombs_required = base_bombs_list[3]
                         airfield_bombs_required = int(base_bombs_required) * 6
-                elif 3.7 <= battle_rating <= 4.7:
+                elif battle_rating == "3.7-4.7":
                     if four_base == "YES":
                         base_bombs_required = base_bombs_list[4]
                         airfield_bombs_required = int(base_bombs_required) * 8
                     else:
                         base_bombs_required = base_bombs_list[5]
                         airfield_bombs_required = int(base_bombs_required) * 8
-                elif 5.0 <= battle_rating:
+                elif battle_rating == "5.0+":
                     if four_base == "YES":
                         base_bombs_required = base_bombs_list[6]
                         airfield_bombs_required = int(base_bombs_required) * 15
                     else:
                         base_bombs_required = base_bombs_list[7]
                         airfield_bombs_required = int(base_bombs_required) * 15
-                else:
-                    # Will only send if the user enters a negative battle rating
-                    await ctx.interaction.followup.send("That battle rating doesn't exist.")
-                    return
+
             # If there isn't any data in the cell then it will return this error, which means the data hasn't been added yet.
-            except ValueError as e:
-                results_string = f"Answer from spreadsheet: Unknown.\n"
-                results_description = f"\n{results_string}" \
-                                      f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
+            except ValueError:
+                results_title = f"Answer from spreadsheet: Unknown (hasn't been researched/calculated yet).\n"
+                results_description = f"\nIf you know what this result should be, feel free to let us know: https://forms.gle/7eyNQkT2zwyBB21z5" \
+                                      f"\n\nHow can we make this bot better? What new features would you like to see? " \
                                       f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're being reviewed as a verified bot! Thanks for all the support!"
-                embedvar = discord.Embed(title="Results",
+                embedvar = discord.Embed(title=results_title,
                                          description=results_description,
                                          color=0x00ff00)
 
                 # If everything works it send how many bombs per base and airfield
                 await ctx.interaction.followup.send(embed=embedvar)
                 return
-            except TypeError as e:
+            except TypeError:
                 await ctx.interaction.followup.send(
                     "This bomb data hasn't been added to the spreadsheet yet. If you are requesting a 4 base "
                     "map, it may be too soon. Please refer to 3 base map data and multiply it by 2x for each "
@@ -382,12 +366,12 @@ async def bomb(ctx):
             if len(planes_with_selected_bomb) == 0:
                 planes_with_selected_bomb_string = f"\nThere aren't any planes from {country} that have the {bomb_name}\n"
 
-            results_description = f"__Bombs Required for Bases: {base_bombs_required}__ \n__Bombs Required for Airfield: " \
-                                  f"{airfield_bombs_required}__" \
-                                  f"\n{planes_with_selected_bomb_string}" \
+            results_title = f"__Bombs Required for Bases: {base_bombs_required}__ \n__Bombs Required for Airfield: " \
+                            f"{airfield_bombs_required}__"
+            results_description = f"\n{planes_with_selected_bomb_string}" \
                                   f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
                                   f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're being reviewed as a verified bot! Thanks for all the support!"
-            embedvar = discord.Embed(title="Results",
+            embedvar = discord.Embed(title=results_title,
                                      description=results_description,
                                      color=0x00ff00)
 
@@ -408,14 +392,14 @@ async def bomb(ctx):
             with open('count.json', 'w') as file:
                 file.write(json.dumps(count_file))
         except Exception as e:
-            await log_exception_and_report(e)
+            log_exception(e)
             raise e
     else:
         await ctx.send(
             "BombBot is now using slash commands! Simply type / and it will bring up the list of commands to use.")
 
 
-@bot.command(name='count', help='Displays number of times $bombs has been called.')
+@bot.command(name='count', help='Displays number of times /bombs has been called.')
 async def count_output(ctx):
     with open('count.json', 'r') as file:
         count_file = json.loads(file.read())
@@ -427,7 +411,7 @@ async def count_output(ctx):
 async def main():
     await bot.login(TOKEN)
     # Only uncomment if a command was added or a command name, description, args, etc. has changed.
-    # await bot.register_application_commands()
+    await bot.register_application_commands()
     await bot.connect()
 
 
