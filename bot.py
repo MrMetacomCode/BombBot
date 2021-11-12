@@ -396,7 +396,10 @@ async def bomb(ctx):
             raise e
     else:
         await ctx.send(
-            "BombBot is now using slash commands! Simply type / and it will bring up the list of commands to use.")
+            "BombBot is now using slash commands! Simply type / and it will bring up the list of commands to use. "
+            "If the commands don't show up, make sure BombBot has the permission 'Use Application Commands. If that doesn't "
+            "work, just kick and re-invite the bot. Top.gg bot page (includes invite link): "
+            "https://top.gg/bot/754879715659087943")
 
 
 @bot.command(name='count', help='Displays number of times /bombs has been called.')
