@@ -345,7 +345,7 @@ async def bomb(ctx):
                 results_title = f"Answer from spreadsheet: Unknown (hasn't been researched/calculated yet).\n"
                 results_description = f"\nIf you know what this result should be, feel free to let us know: https://forms.gle/7eyNQkT2zwyBB21z5" \
                                       f"\n\nHow can we make this bot better? What new features would you like to see? " \
-                                      f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're being reviewed as a verified bot! Thanks for all the support!"
+                                      f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
                 embedvar = discord.Embed(title=results_title,
                                          description=results_description,
                                          color=0x00ff00)
@@ -368,9 +368,9 @@ async def bomb(ctx):
 
             results_title = f"__Bombs Required for Bases: {base_bombs_required}__ \n__Bombs Required for Airfield: " \
                             f"{airfield_bombs_required}__"
-            results_description = f"\n{planes_with_selected_bomb_string}" \
+            results_description = f"\n\n{planes_with_selected_bomb_string}" \
                                   f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
-                                  f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're being reviewed as a verified bot! Thanks for all the support!"
+                                  f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
             embedvar = discord.Embed(title=results_title,
                                      description=results_description,
                                      color=0x00ff00)
