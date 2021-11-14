@@ -253,9 +253,10 @@ async def bomb(ctx):
                 return True
 
             interaction = await bot.wait_for("component_interaction", check=country_check)
+            await interaction.response.defer_update()
 
             country_number_components.disable_components()
-            await interaction.response.edit_message(components=country_number_components)
+            await interaction.message.edit(components=country_number_components)
 
             country_number = int(interaction.component.custom_id)
             country = countries[country_number - 1]
@@ -268,21 +269,21 @@ async def bomb(ctx):
                                      description=bombs_embed,
                                      color=0x00ff00)
             bombs_numbers_components = list_to_number_buttons(bomb_names)
-            await ctx.interaction.followup.send(embed=embedvar, components=bombs_numbers_components)
-
-            bombs_choice_message = await ctx.interaction.original_message()
+            bombs_choice_message = await ctx.interaction.followup.send(embed=embedvar,
+                                                                       components=bombs_numbers_components)
 
             def bombs_check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
                     return False
                 if interaction_.message.id != bombs_choice_message.id:
-                    return True
+                    return False
                 return True
 
             interaction = await bot.wait_for("component_interaction", check=bombs_check)
+            await interaction.response.defer_update()
 
             bombs_numbers_components.disable_components()
-            await interaction.response.edit_message(components=bombs_numbers_components)
+            await interaction.message.edit(components=bombs_numbers_components)
 
             bomb_number = int(interaction.component.custom_id)
             bomb_name = bomb_names[bomb_number - 1]
@@ -291,22 +292,21 @@ async def bomb(ctx):
             battle_rating_multipliers = {"1.0-2.0": 5, "2.3-3.3": 6, "3.7-4.7": 8, "5.0+": 15}
             battle_rating_ranges = battle_rating_multipliers.keys()
             battle_rating_rages_button_components = list_to_buttons(battle_rating_ranges)
-            await ctx.interaction.followup.send("Select a battle rating range:",
-                                                components=battle_rating_rages_button_components)
-
-            br_choice_message = await ctx.interaction.original_message()
+            br_choice_message = await ctx.interaction.followup.send("Select a battle rating range:",
+                                                                    components=battle_rating_rages_button_components)
 
             def check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
                     return False
                 if interaction_.message.id != br_choice_message.id:
-                    return True
+                    return False
                 return True
 
             interaction = await bot.wait_for("component_interaction", check=check)
+            await interaction.response.defer_update()
 
             battle_rating_rages_button_components.disable_components()
-            await interaction.response.edit_message(components=battle_rating_rages_button_components)
+            await interaction.message.edit(components=battle_rating_rages_button_components)
 
             battle_rating = interaction.component.custom_id
 
@@ -317,21 +317,20 @@ async def bomb(ctx):
                     discord.ui.Button(label="No", custom_id="NO"),
                 ),
             )
-            await ctx.interaction.followup.send("Is this a four base map?", components=confirmation_components)
-
-            confirmation_message = await ctx.interaction.original_message()
+            confirmation_message = await ctx.interaction.followup.send("Is this a four base map?", components=confirmation_components)
 
             def check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
                     return False
                 if interaction_.message.id != confirmation_message.id:
-                    return True
+                    return False
                 return True
 
             interaction = await bot.wait_for("component_interaction", check=check)
+            await interaction.response.defer_update()
 
             confirmation_components.disable_components()
-            await interaction.response.edit_message(components=confirmation_components)
+            await interaction.message.edit(components=confirmation_components)
 
             four_base = interaction.component.custom_id
 
