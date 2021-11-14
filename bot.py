@@ -127,9 +127,10 @@ def embed_maker(thing_list):
     return embed
 
 
-def get_bomb_by_name(bomb_name, country_name):
-    bombs_c.execute(f"SELECT * FROM {country_name} WHERE bomb_name=:bomb_name", {'bomb_name': bomb_name})
-    return bombs_c.fetchall()
+def get_base_bombs_required(bomb_name, country_name, battle_rating_range):
+    bombs_c.execute(f"""SELECT "{battle_rating_range}" FROM {country_name} WHERE bomb_name=:bomb_name""",
+                    {'bomb_name': bomb_name})
+    return bombs_c.fetchone()
 
 
 def get_bombs_by_country(country_name):
@@ -197,6 +198,32 @@ def list_to_buttons(list_items):
     return buttons_components
 
 
+async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
+    battle_rating_multipliers = {"1.0-2.0": 5, "2.3-3.3": 6, "3.7-4.7": 8, "5.0+": 15}
+    base_prefix = "3_base_"
+    if four_base == "YES":
+        base_prefix = "4_base_"
+    base_bombs_required = get_base_bombs_required(bomb_name, country, f"{base_prefix}{battle_rating}")[0]
+    if base_bombs_required is None or "whole lotta these" in base_bombs_required:
+        answer = "Unknown (hasn't been researched/calculated yet)"
+
+        if base_bombs_required is not None and "whole lotta these" in base_bombs_required:
+            answer = base_bombs_required
+
+        results_title = f"Answer from spreadsheet: {answer}.\n"
+        results_description = f"\nIf you know what this result should be, feel free to let us know: https://forms.gle/7eyNQkT2zwyBB21z5" \
+                              f"\n\nHow can we make this bot better? What new features would you like to see? " \
+                              f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
+
+        embedvar = discord.Embed(title=results_title,
+                                 description=results_description,
+                                 color=0x00ff00)
+        await ctx.interaction.followup.send(embed=embedvar)
+        return False
+    airfield_bombs_required = int(base_bombs_required) * battle_rating_multipliers[battle_rating]
+    return {"base_bombs_required": base_bombs_required, "airfield_bombs_required": airfield_bombs_required}
+
+
 # Command that returns bombs needed for bases and airfield.
 @bot.command(name='bombs', aliases=['bomb'], help='Returns bombs to destroy base and airfield.')
 async def bomb(ctx):
@@ -218,14 +245,14 @@ async def bomb(ctx):
 
             country_choice_message = await ctx.interaction.original_message()
 
-            def check(interaction_: discord.Interaction):
+            def country_check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
-                    return True
+                    return False
                 if interaction_.message.id != country_choice_message.id:
-                    return True
+                    return False
                 return True
 
-            interaction = await bot.wait_for("component_interaction", check=check)
+            interaction = await bot.wait_for("component_interaction", check=country_check)
 
             country_number_components.disable_components()
             await interaction.response.edit_message(components=country_number_components)
@@ -245,14 +272,14 @@ async def bomb(ctx):
 
             bombs_choice_message = await ctx.interaction.original_message()
 
-            def check(interaction_: discord.Interaction):
+            def bombs_check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
-                    return True
+                    return False
                 if interaction_.message.id != bombs_choice_message.id:
                     return True
                 return True
 
-            interaction = await bot.wait_for("component_interaction", check=check)
+            interaction = await bot.wait_for("component_interaction", check=bombs_check)
 
             bombs_numbers_components.disable_components()
             await interaction.response.edit_message(components=bombs_numbers_components)
@@ -261,15 +288,17 @@ async def bomb(ctx):
             bomb_name = bomb_names[bomb_number - 1]
 
             # Asks the user to enter the battle rating of their current match.
-            battle_rating_ranges = ["1.0-2.0", "2.3-3.3", "3.7-4.7", "5.0+"]
+            battle_rating_multipliers = {"1.0-2.0": 5, "2.3-3.3": 6, "3.7-4.7": 8, "5.0+": 15}
+            battle_rating_ranges = battle_rating_multipliers.keys()
             battle_rating_rages_button_components = list_to_buttons(battle_rating_ranges)
-            await ctx.interaction.followup.send("Select a battle rating range:", components=battle_rating_rages_button_components)
+            await ctx.interaction.followup.send("Select a battle rating range:",
+                                                components=battle_rating_rages_button_components)
 
             br_choice_message = await ctx.interaction.original_message()
 
             def check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
-                    return True
+                    return False
                 if interaction_.message.id != br_choice_message.id:
                     return True
                 return True
@@ -294,7 +323,7 @@ async def bomb(ctx):
 
             def check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
-                    return True
+                    return False
                 if interaction_.message.id != confirmation_message.id:
                     return True
                 return True
@@ -306,59 +335,14 @@ async def bomb(ctx):
 
             four_base = interaction.component.custom_id
 
-            # Creates a list of the data needed to destroy a base using the country and bomb type.
-            base_bombs_list = get_bomb_by_name(bomb_name, country)[0][1:]
-
             # Using the battle_rating and four_base variables calculates bombs needed for bases and airfield.
-            try:
-                if battle_rating == "1.0-2.0":
-                    if four_base == "YES":
-                        base_bombs_required = base_bombs_list[0]
-                        airfield_bombs_required = int(base_bombs_required) * 5
-                    else:
-                        base_bombs_required = base_bombs_list[1]
-                        airfield_bombs_required = int(base_bombs_required) * 5
-                elif battle_rating == "2.3-3.3":
-                    if four_base == "YES":
-                        base_bombs_required = base_bombs_list[2]
-                        airfield_bombs_required = int(base_bombs_required) * 6
-                    else:
-                        base_bombs_required = base_bombs_list[3]
-                        airfield_bombs_required = int(base_bombs_required) * 6
-                elif battle_rating == "3.7-4.7":
-                    if four_base == "YES":
-                        base_bombs_required = base_bombs_list[4]
-                        airfield_bombs_required = int(base_bombs_required) * 8
-                    else:
-                        base_bombs_required = base_bombs_list[5]
-                        airfield_bombs_required = int(base_bombs_required) * 8
-                elif battle_rating == "5.0+":
-                    if four_base == "YES":
-                        base_bombs_required = base_bombs_list[6]
-                        airfield_bombs_required = int(base_bombs_required) * 15
-                    else:
-                        base_bombs_required = base_bombs_list[7]
-                        airfield_bombs_required = int(base_bombs_required) * 15
+            bomb_results = await get_bomb_data(ctx, bomb_name, country, battle_rating, four_base)
 
-            # If there isn't any data in the cell then it will return this error, which means the data hasn't been added yet.
-            except ValueError:
-                results_title = f"Answer from spreadsheet: Unknown (hasn't been researched/calculated yet).\n"
-                results_description = f"\nIf you know what this result should be, feel free to let us know: https://forms.gle/7eyNQkT2zwyBB21z5" \
-                                      f"\n\nHow can we make this bot better? What new features would you like to see? " \
-                                      f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
-                embedvar = discord.Embed(title=results_title,
-                                         description=results_description,
-                                         color=0x00ff00)
+            if bomb_results is False:
+                return
 
-                # If everything works it send how many bombs per base and airfield
-                await ctx.interaction.followup.send(embed=embedvar)
-                return
-            except TypeError:
-                await ctx.interaction.followup.send(
-                    "This bomb data hasn't been added to the spreadsheet yet. If you are requesting a 4 base "
-                    "map, it may be too soon. Please refer to 3 base map data and multiply it by 2x for each "
-                    "base to get **approximate** 4 base data.")
-                return
+            base_bombs_required = bomb_results["base_bombs_required"]
+            airfield_bombs_required = bomb_results["airfield_bombs_required"]
 
             planes_with_selected_bomb = remove_duplicates_from_list(get_ordnances_by_plane(country, bomb_name))
             planes_with_selected_bomb_string = list_to_string(planes_with_selected_bomb)
@@ -368,7 +352,7 @@ async def bomb(ctx):
 
             results_title = f"__Bombs Required for Bases: {base_bombs_required}__ \n__Bombs Required for Airfield: " \
                             f"{airfield_bombs_required}__"
-            results_description = f"\n\n{planes_with_selected_bomb_string}" \
+            results_description = f"\n{planes_with_selected_bomb_string}" \
                                   f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
                                   f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
             embedvar = discord.Embed(title=results_title,
@@ -414,7 +398,7 @@ async def count_output(ctx):
 async def main():
     await bot.login(TOKEN)
     # Only uncomment if a command was added or a command name, description, args, etc. has changed.
-    await bot.register_application_commands()
+    # await bot.register_application_commands()
     await bot.connect()
 
 
