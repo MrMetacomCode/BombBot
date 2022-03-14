@@ -201,7 +201,7 @@ def list_to_buttons(list_items):
 async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
     battle_rating_multipliers = {"1.0-2.0": 5, "2.3-3.3": 6, "3.7-4.7": 8, "5.0+": 15}
     base_prefix = "3_base_"
-    if four_base == "YES":
+    if four_base == "Yes":
         base_prefix = "4_base_"
     base_bombs_required = get_base_bombs_required(bomb_name, country, f"{base_prefix}{battle_rating}")[0]
     if base_bombs_required is None or "whole lotta these" in base_bombs_required:
@@ -225,7 +225,8 @@ async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
 
 
 # Command that returns bombs needed for bases and airfield.
-@bot.command(name='bombs', aliases=['bomb'], help='Returns bombs to destroy base and airfield.')
+@bot.command(name='bombs', aliases=['bomb'], help='Returns bombs to destroy base and airfield.', pass_context=True,
+             application_command_meta=commands.ApplicationCommandMeta(options=[]))
 async def bomb(ctx):
     if hasattr(ctx, "interaction"):
         with open('count.json', 'r') as file:
@@ -313,8 +314,8 @@ async def bomb(ctx):
             # Asks the user if the map has four bases
             confirmation_components = discord.ui.MessageComponents(
                 discord.ui.ActionRow(
-                    discord.ui.Button(label="Yes", custom_id="YES"),
-                    discord.ui.Button(label="No", custom_id="NO"),
+                    (yes_button := discord.ui.Button(label="Yes")),
+                    (no_button := discord.ui.Button(label="No")),
                 ),
             )
             confirmation_message = await ctx.interaction.followup.send("Is this a four base map?", components=confirmation_components)
@@ -322,7 +323,7 @@ async def bomb(ctx):
             def check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
                     return False
-                if interaction_.message.id != confirmation_message.id:
+                if interaction_.custom_id not in [yes_button.custom_id, no_button.custom_id]:
                     return False
                 return True
 
@@ -332,7 +333,7 @@ async def bomb(ctx):
             confirmation_components.disable_components()
             await interaction.message.edit(components=confirmation_components)
 
-            four_base = interaction.component.custom_id
+            four_base = interaction.component.label
 
             # Using the battle_rating and four_base variables calculates bombs needed for bases and airfield.
             bomb_results = await get_bomb_data(ctx, bomb_name, country, battle_rating, four_base)
@@ -380,27 +381,21 @@ async def bomb(ctx):
     else:
         await ctx.send(
             "BombBot is now using slash commands! Simply type / and it will bring up the list of commands to use. "
-            "If the commands don't show up, make sure BombBot has the permission 'Use Application Commands. If that doesn't "
-            "work, just kick and re-invite the bot. Top.gg bot page (includes invite link): "
+            "If the commands don't show up, make sure BombBot has the permission 'Use Application Commands`. "
+            "If that doesn't work, just kick and re-invite the bot. Top.gg bot page (includes invite link): "
             "https://top.gg/bot/754879715659087943")
 
 
-@bot.command(name='count', help='Displays number of times /bombs has been called.')
-async def count_output(ctx):
-    with open('count.json', 'r') as file:
-        count_file = json.loads(file.read())
-
-    count_ = int(count_file["count"])
-    await ctx.interaction.response.send_message(f"$bombs has been called a total of {count_} times.")
+bot.remove_command("help")
 
 
 async def main():
     await bot.login(TOKEN)
-    # Only uncomment if a command was added or a command name, description, args, etc. has changed.
-    # await bot.register_application_commands()
+    # Only uncomment if a command was added or a command name, description, parameters, etc. has changed.
+    await bot.register_application_commands(bot.commands)
     await bot.connect()
 
 
-print("Server Running")
+print("Bot is starting...")
 loop = bot.loop
 loop.run_until_complete(main())
