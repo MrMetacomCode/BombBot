@@ -1,4 +1,5 @@
 import json
+import math
 import os.path
 import sqlite3
 import discord
@@ -13,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Security variables.
-TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
+TOKEN = os.getenv('BOMBBOT_TESTING_DISCORD_TOKEN')
 SPREADSHEET_ID = '1Ra9Ca60nwIlG_aGVS9bITjM94SJ6H5vIocl2SRVEOcM'
 TRACKING_SPREADSHEET_ID = '1HhomUgsgjhWWg67M54ZY_RP2l2Ns7LiDCszRJE9XMgQ'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -200,6 +201,7 @@ def list_to_buttons(list_items):
 
 async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
     battle_rating_multipliers = {"1.0-2.0": 5, "2.3-3.3": 6, "3.7-4.7": 8, "5.0+": 15}
+    base_hp_multipliers = {"1.0-2.0": 0.75, "2.3-3.3": 1, "3.7-4.7": 1.25, "5.0+": 1.5}
     base_prefix = "3_base_"
     if four_base == "Yes":
         base_prefix = "4_base_"
@@ -220,7 +222,7 @@ async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
                                  color=0x00ff00)
         await ctx.interaction.followup.send(embed=embedvar)
         return False
-    airfield_bombs_required = int(base_bombs_required) * battle_rating_multipliers[battle_rating]
+    airfield_bombs_required = int(math.ceil(int(base_bombs_required) * battle_rating_multipliers[battle_rating] / base_hp_multipliers[battle_rating]))
     return {"base_bombs_required": base_bombs_required, "airfield_bombs_required": airfield_bombs_required}
 
 
