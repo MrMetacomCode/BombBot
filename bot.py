@@ -394,7 +394,7 @@ bot.remove_command("help")
 async def main():
     await bot.login(TOKEN)
     # Only uncomment if a command was added or a command name, description, parameters, etc. has changed.
-    await bot.register_application_commands(bot.commands)
+    # await bot.register_application_commands(bot.commands)
     await bot.connect()
 
 
