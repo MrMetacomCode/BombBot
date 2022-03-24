@@ -199,12 +199,15 @@ def list_to_buttons(list_items):
     return buttons_components
 
 
+# EST = Estimated
 async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
     battle_rating_multipliers = {"1.0-2.0": 5, "2.3-3.3": 6, "3.7-4.7": 8, "5.0+": 15}
     base_hp_multipliers = {"1.0-2.0": 0.75, "2.3-3.3": 1, "3.7-4.7": 1.25, "5.0+": 1.5}
     base_prefix = "3_base_"
     if four_base == "Yes":
         base_prefix = "4_base_"
+    is_estimated = False
+
     base_bombs_required = get_base_bombs_required(bomb_name, country, f"{base_prefix}{battle_rating}")[0]
     if base_bombs_required is None or "whole lotta these" in base_bombs_required:
         answer = "Unknown (hasn't been researched/calculated yet)"
@@ -222,8 +225,15 @@ async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
                                  color=0x00ff00)
         await ctx.interaction.followup.send(embed=embedvar)
         return False
+    elif "EST" in base_bombs_required:
+        try:
+            base_bombs_required = int(base_bombs_required.split(" ")[0])
+        except ValueError:
+            base_bombs_required = "Whoops, error. Guess you'll have to full send it."
+
+        is_estimated = True
     airfield_bombs_required = int(math.ceil(int(base_bombs_required) * battle_rating_multipliers[battle_rating] / base_hp_multipliers[battle_rating]))
-    return {"base_bombs_required": base_bombs_required, "airfield_bombs_required": airfield_bombs_required}
+    return {"base_bombs_required": base_bombs_required, "airfield_bombs_required": airfield_bombs_required, "EST": is_estimated}
 
 
 # Command that returns bombs needed for bases and airfield.
@@ -320,7 +330,8 @@ async def bomb(ctx):
                     (no_button := discord.ui.Button(label="No")),
                 ),
             )
-            confirmation_message = await ctx.interaction.followup.send("Is this a four base map?", components=confirmation_components)
+            confirmation_message = await ctx.interaction.followup.send("Is this a four base map?",
+                                                                       components=confirmation_components)
 
             def check(interaction_: discord.Interaction):
                 if interaction_.user != ctx.author:
@@ -352,11 +363,20 @@ async def bomb(ctx):
             if len(planes_with_selected_bomb) == 0:
                 planes_with_selected_bomb_string = f"\nThere aren't any planes from {country} that have the {bomb_name}\n"
 
-            results_title = f"__Bombs Required for Bases: {base_bombs_required}__ \n__Bombs Required for Airfield: " \
-                            f"{airfield_bombs_required}__"
-            results_description = f"\n{planes_with_selected_bomb_string}" \
-                                  f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
-                                  f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
+            bombs_needed_title = f"__Bombs Required for Bases: {base_bombs_required}__ \n__Bombs Required for Airfield: " \
+                                 f"{airfield_bombs_required}__"
+            if bomb_results["EST"]:
+                results_title = f"Unknown (hasn't been researched/calculated yet)"
+                results_description = f"However, here is an __***estimate***__ that may or may not be accurate:\n**{bombs_needed_title}**" \
+                                      f"\n\nIf you know what this result should be, feel free to let us know: https://forms.gle/7eyNQkT2zwyBB21z5" \
+                                      f"\n{planes_with_selected_bomb_string}" \
+                                      f"\nHow can we make this bot better? What new features would you like to see? " \
+                                      f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
+            else:
+                results_title = bombs_needed_title
+                results_description = f"\n{planes_with_selected_bomb_string}" \
+                                      f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
+                                      f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
             embedvar = discord.Embed(title=results_title,
                                      description=results_description,
                                      color=0x00ff00)
