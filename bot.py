@@ -236,7 +236,6 @@ async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
     return {"base_bombs_required": base_bombs_required, "airfield_bombs_required": airfield_bombs_required, "EST": is_estimated}
 
 
-# Command that returns bombs needed for bases and airfield.
 @bot.command(name='bombs', aliases=['bomb'], help='Returns bombs to destroy base and airfield.', pass_context=True,
              application_command_meta=commands.ApplicationCommandMeta(options=[]))
 async def bomb(ctx):
@@ -403,7 +402,7 @@ async def bomb(ctx):
     else:
         await ctx.send(
             "BombBot is now using slash commands! Simply type / and it will bring up the list of commands to use. "
-            "If the commands don't show up, make sure BombBot has the permission 'Use Application Commands`. "
+            "If the commands don't show up, make sure BombBot has the permission `Use Application Commands`. "
             "If that doesn't work, just kick and re-invite the bot. Top.gg bot page (includes invite link): "
             "https://top.gg/bot/754879715659087943")
 
@@ -413,8 +412,7 @@ bot.remove_command("help")
 
 async def main():
     await bot.login(TOKEN)
-    # Only uncomment if a command was added or a command name, description, parameters, etc. has changed.
-    # await bot.register_application_commands(bot.commands)
+    await bot.register_application_commands(list(bot.commands))
     await bot.connect()
 
 
