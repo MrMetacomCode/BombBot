@@ -14,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Security variables.
-TOKEN = os.getenv('BOMBBOT_DISCORD_TOKEN')
+TOKEN = os.getenv('BOMBBOT_TESTING_DISCORD_TOKEN')
 SPREADSHEET_ID = '1Ra9Ca60nwIlG_aGVS9bITjM94SJ6H5vIocl2SRVEOcM'
 TRACKING_SPREADSHEET_ID = '1HhomUgsgjhWWg67M54ZY_RP2l2Ns7LiDCszRJE9XMgQ'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -115,6 +115,15 @@ async def on_ready():
     except Exception as e:
         log_exception(e)
         raise e
+
+
+@bot.event
+async def on_message(message):
+    if "/bombs" == message.content and message.author.bot is False:
+        await message.channel.send("If you cannot see `/bombs` as a slash command, kick and re-invite BombBot."
+                                   "\nIf this doesn't fix it, join the support server: https://top.gg/bot/754879715659087943/invite")
+
+    await bot.process_commands(message)
 
 
 # Helper function that turns lists into numbered strings with line breaks.
@@ -236,7 +245,7 @@ async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
     return {"base_bombs_required": base_bombs_required, "airfield_bombs_required": airfield_bombs_required, "EST": is_estimated}
 
 
-@bot.command(name='bombs', aliases=['bomb'], help='Returns bombs to destroy base and airfield.', pass_context=True,
+@bot.command(name='bombs', help='Returns bombs to destroy base and airfield.', pass_context=True,
              application_command_meta=commands.ApplicationCommandMeta(options=[]))
 async def bomb(ctx):
     if hasattr(ctx, "interaction"):
