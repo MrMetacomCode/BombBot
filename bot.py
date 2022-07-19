@@ -1,12 +1,12 @@
 import json
 import math
+import zoneinfo
 import os.path
 import sqlite3
 import discord
 import pickle
 from datetime import date
 from datetime import datetime
-from discord.ext import commands
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -28,7 +28,7 @@ ordnance_c = ordnance_conn.cursor()
 intents = discord.Intents(messages=True, guilds=True, bans=True, dm_messages=True, dm_reactions=True, dm_typing=True,
                           emojis=True, guild_messages=True, guild_reactions=True, guild_typing=True, invites=True,
                           members=True, reactions=True)
-bot = commands.Bot(command_prefix='$', intents=intents)
+bot = discord.Bot(intents=intents)
 
 # Setup for Google Spreadsheet to be able to pull from it.
 creds = None
@@ -109,7 +109,7 @@ async def on_ready():
 
     try:
         # Runs the function to report the amount of times $bombs has been called today.
-        scheduler = AsyncIOScheduler()
+        scheduler = AsyncIOScheduler(timezone=zoneinfo.ZoneInfo("America/Chicago"))
         scheduler.add_job(func, CronTrigger(hour=23, minute=59, second=0))
         scheduler.start()
     except Exception as e:
@@ -123,18 +123,20 @@ async def on_message(message):
         await message.channel.send("If you cannot see `/bombs` as a slash command, kick and re-invite BombBot."
                                    "\nIf this doesn't fix it, join the support server: https://top.gg/bot/754879715659087943/invite")
 
-    await bot.process_commands(message)
 
-
-# Helper function that turns lists into numbered strings with line breaks.
-def embed_maker(thing_list):
+# Turns lists into numbered strings with line breaks.
+def list_to_numbered_string(item_list):
     list_number = 1
-    embed = ""
-    for thing in thing_list:
-        item = f"{list_number} = {thing}\n"
-        embed += item
+    numbered_string = ""
+    for item in item_list:
+        item_string = f"{list_number} = {item}\n"
+        numbered_string += item_string
         list_number += 1
-    return embed
+    return numbered_string
+
+
+def string_to_embed(description, title=discord.Embed.Empty, color=0x00ff00):
+    return discord.Embed(title=title, description=description, color=color)
 
 
 def get_base_bombs_required(bomb_name, country_name, battle_rating_range):
@@ -190,22 +192,48 @@ def list_to_string(item_list):
     return items_string
 
 
-def list_to_number_buttons(list_items):
-    number_buttons = []
+async def list_to_number_buttons_result(ctx: discord.ApplicationContext, embed_prompt: discord.Embed, list_items):
+    view = DefaultView()
+
     for number in list(range(1, len(list_items) + 1)):
-        button = discord.ui.Button(label=str(number), custom_id=str(number))
-        number_buttons.append(button)
-    number_components = discord.ui.MessageComponents.add_buttons_with_rows(*number_buttons)
-    return number_components
+        view.add_item(DefaultButton(label=str(number), custom_id=str(number)))
+    await ctx.interaction.followup.send(embed=embed_prompt, view=view)
+    timed_out = await view.wait()
+    if timed_out:
+        view.disable_all_items()
+        view.stop()
+        await ctx.interaction.followup.send("Timed out.", ephemeral=True)
+        return False
+
+    return view.custom_id
 
 
-def list_to_buttons(list_items):
-    buttons = []
+async def list_to_buttons_result(ctx: discord.ApplicationContext, embed_prompt: discord.Embed, list_items):
+    view = DefaultView()
+
     for item in list_items:
-        button = discord.ui.Button(label=str(item), custom_id=str(item))
-        buttons.append(button)
-    buttons_components = discord.ui.MessageComponents.add_buttons_with_rows(*buttons)
-    return buttons_components
+        view.add_item(DefaultButton(label=str(item), custom_id=str(item)))
+    await ctx.interaction.followup.send(embed=embed_prompt, view=view)
+    timed_out = await view.wait()
+    if timed_out:
+        view.disable_all_items()
+        view.stop()
+        await ctx.interaction.followup.send("Timed out.", ephemeral=True)
+        return False
+
+    return view.custom_id
+
+
+async def send_yes_no_buttons_message(ctx, confirmation_message):
+    view = Confirm()
+    interaction = await ctx.interaction.followup.send(embed=string_to_embed(confirmation_message), view=view)
+    result = await view.wait()
+    if result:
+        view.value = False
+        view.disable_all_items()
+        view.stop()
+        await interaction.edit(view=view)
+    return view.value
 
 
 # EST = Estimated
@@ -245,116 +273,39 @@ async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
     return {"base_bombs_required": base_bombs_required, "airfield_bombs_required": airfield_bombs_required, "EST": is_estimated}
 
 
-@bot.command(name='bombs', help='Returns bombs to destroy base and airfield.', pass_context=True,
-             application_command_meta=commands.ApplicationCommandMeta(options=[]))
+@bot.slash_command(name='bombs', description='Returns bombs to destroy base and airfield.')
 async def bomb(ctx):
+    await ctx.interaction.response.defer()
     if hasattr(ctx, "interaction"):
         with open('count.json', 'r') as file:
             count_file = json.loads(file.read())
         try:
             countries = ["America", "Britain", "China", "France", "Germany", "Italy", "Japan", "Russia", "Sweden"]
+            country_embed = string_to_embed(list_to_numbered_string(countries), "Select a country to view bombs from:")
+            country_number = await list_to_number_buttons_result(ctx, country_embed, countries)
+            if country_number is False:
+                return
+            country = countries[int(country_number) - 1]
 
-            # Uses the helper function to make a numbered list of the countries.
-            countries_embed = embed_maker(countries)
-
-            # Makes an embed and sends it.
-            embedvar = discord.Embed(title="Select a country to view bombs from:",
-                                     description=countries_embed,
-                                     color=0x00ff00)
-            country_number_components = list_to_number_buttons(countries)
-            await ctx.interaction.response.send_message(embed=embedvar, components=country_number_components)
-
-            country_choice_message = await ctx.interaction.original_message()
-
-            def country_check(interaction_: discord.Interaction):
-                if interaction_.user != ctx.author:
-                    return False
-                if interaction_.message.id != country_choice_message.id:
-                    return False
-                return True
-
-            interaction = await bot.wait_for("component_interaction", check=country_check)
-            await interaction.response.defer_update()
-
-            country_number_components.disable_components()
-            await interaction.message.edit(components=country_number_components)
-
-            country_number = int(interaction.component.custom_id)
-            country = countries[country_number - 1]
-
+            # Asks for the desired bomb to get data for.
             bomb_values = get_bombs_by_country(country)
             bomb_names = fetchall_to_list(bomb_values)
-
-            bombs_embed = embed_maker(bomb_names)
-            embedvar = discord.Embed(title=f"Select a bomb from {country}:",
-                                     description=bombs_embed,
-                                     color=0x00ff00)
-            bombs_numbers_components = list_to_number_buttons(bomb_names)
-            bombs_choice_message = await ctx.interaction.followup.send(embed=embedvar,
-                                                                       components=bombs_numbers_components)
-
-            def bombs_check(interaction_: discord.Interaction):
-                if interaction_.user != ctx.author:
-                    return False
-                if interaction_.message.id != bombs_choice_message.id:
-                    return False
-                return True
-
-            interaction = await bot.wait_for("component_interaction", check=bombs_check)
-            await interaction.response.defer_update()
-
-            bombs_numbers_components.disable_components()
-            await interaction.message.edit(components=bombs_numbers_components)
-
-            bomb_number = int(interaction.component.custom_id)
-            bomb_name = bomb_names[bomb_number - 1]
+            bomb_names_embed = string_to_embed(list_to_numbered_string(bomb_names), f"Select a bomb from {country}:")
+            bomb_number = await list_to_number_buttons_result(ctx, bomb_names_embed, bomb_names)
+            if bomb_number is False:
+                return
+            bomb_name = bomb_names[int(bomb_number) - 1]
 
             # Asks the user to enter the battle rating of their current match.
             battle_rating_multipliers = {"1.0-2.0": 5, "2.3-3.3": 6, "3.7-4.7": 8, "5.0+": 15}
             battle_rating_ranges = battle_rating_multipliers.keys()
-            battle_rating_rages_button_components = list_to_buttons(battle_rating_ranges)
-            br_choice_message = await ctx.interaction.followup.send("Select a battle rating range:",
-                                                                    components=battle_rating_rages_button_components)
-
-            def check(interaction_: discord.Interaction):
-                if interaction_.user != ctx.author:
-                    return False
-                if interaction_.message.id != br_choice_message.id:
-                    return False
-                return True
-
-            interaction = await bot.wait_for("component_interaction", check=check)
-            await interaction.response.defer_update()
-
-            battle_rating_rages_button_components.disable_components()
-            await interaction.message.edit(components=battle_rating_rages_button_components)
-
-            battle_rating = interaction.component.custom_id
+            battle_rating_ranges_embed = string_to_embed("Select a battle rating range:", discord.Embed.Empty)
+            battle_rating = await list_to_buttons_result(ctx, battle_rating_ranges_embed, battle_rating_ranges)
+            if battle_rating is False:
+                return
 
             # Asks the user if the map has four bases
-            confirmation_components = discord.ui.MessageComponents(
-                discord.ui.ActionRow(
-                    (yes_button := discord.ui.Button(label="Yes")),
-                    (no_button := discord.ui.Button(label="No")),
-                ),
-            )
-            confirmation_message = await ctx.interaction.followup.send("Is this a four base map?",
-                                                                       components=confirmation_components)
-
-            def check(interaction_: discord.Interaction):
-                if interaction_.user != ctx.author:
-                    return False
-                if interaction_.custom_id not in [yes_button.custom_id, no_button.custom_id]:
-                    return False
-                return True
-
-            interaction = await bot.wait_for("component_interaction", check=check)
-            await interaction.response.defer_update()
-
-            confirmation_components.disable_components()
-            await interaction.message.edit(components=confirmation_components)
-
-            four_base = interaction.component.label
+            four_base = await send_yes_no_buttons_message(ctx, "Is this a four base map?")
 
             # Using the battle_rating and four_base variables calculates bombs needed for bases and airfield.
             bomb_results = await get_bomb_data(ctx, bomb_name, country, battle_rating, four_base)
@@ -416,15 +367,46 @@ async def bomb(ctx):
             "https://top.gg/bot/754879715659087943")
 
 
-bot.remove_command("help")
+class DefaultButton(discord.ui.Button):
+    def __init__(self, custom_id, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.custom_id = custom_id
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.view.custom_id = interaction.custom_id
+        self.view.disable_all_items()
+        self.view.stop()
+        return
 
 
-async def main():
-    await bot.login(TOKEN)
-    await bot.register_application_commands(list(bot.commands))
-    await bot.connect()
+class DefaultView(discord.ui.View):
+    def __init__(self, custom_id=None):
+        super().__init__()
+        self.custom_id = custom_id
+
+
+class Confirm(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
+    @discord.ui.button(label="Yes", style=discord.ButtonStyle.green)
+    async def confirm_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.value = True
+        self.disable_all_items()
+        self.stop()
+        await interaction.response.defer()
+        await interaction.edit_original_message(view=self)
+
+    @discord.ui.button(label="No", style=discord.ButtonStyle.red)
+    async def cancel_callback(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.value = False
+        self.disable_all_items()
+        self.stop()
+        await interaction.response.defer()
+        await interaction.edit_original_message(view=self)
 
 
 print("Bot is starting...")
-loop = bot.loop
-loop.run_until_complete(main())
+bot.run(TOKEN)
