@@ -94,7 +94,6 @@ async def func():
         raise e
 
 
-# On_Ready event that displays useful information when first run.
 @bot.event
 async def on_ready():
     print("Bot is ready.")
@@ -277,6 +276,8 @@ async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
 async def bomb(ctx):
     await ctx.interaction.response.defer()
     if hasattr(ctx, "interaction"):
+        await ctx.interaction.followup.send(embed=string_to_embed("**__WARNING__** - Bomb data is no longer being updated. "
+                                                                  "\nRead more here: https://gist.github.com/MrMetacomCode/3a4a9f00c19772006d8da21b74686e8f"))
         with open('count.json', 'r') as file:
             count_file = json.loads(file.read())
         try:
