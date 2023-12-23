@@ -1,0 +1,10 @@
+version: '3'
+services:
+  bombbot_discord:
+    build: .
+    env_file:
+      - bombbot-variables.env
+    volumes:
+      - /home/mrmetacom/BombBot:/app
+    command: python3 bot.py
+    restart: always
