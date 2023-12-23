@@ -252,9 +252,7 @@ async def get_bomb_data(ctx, bomb_name, country, battle_rating, four_base):
             answer = base_bombs_required
 
         results_title = f"Answer from spreadsheet: {answer}.\n"
-        results_description = f"\nIf you know what this result should be, feel free to let us know: https://forms.gle/7eyNQkT2zwyBB21z5" \
-                              f"\n\nHow can we make this bot better? What new features would you like to see? " \
-                              f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
+        results_description = f"\nP.S. We're now a verified Discord bot! Thanks for all the support!"
 
         embedvar = discord.Embed(title=results_title,
                                  description=results_description,
@@ -328,15 +326,12 @@ async def bomb(ctx):
             if bomb_results["EST"]:
                 results_title = f"Unknown (hasn't been researched/calculated yet)"
                 results_description = f"However, here is an __***estimate***__ that may or may not be accurate:\n**{bombs_needed_title}**" \
-                                      f"\n\nIf you know what this result should be, feel free to let us know: https://forms.gle/7eyNQkT2zwyBB21z5" \
-                                      f"\n{planes_with_selected_bomb_string}" \
-                                      f"\nHow can we make this bot better? What new features would you like to see? " \
-                                      f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
+                                      f"\n\n{planes_with_selected_bomb_string}" \
+                                      f"\nP.S. We're now a verified Discord bot! Thanks for all the support!"
             else:
                 results_title = bombs_needed_title
                 results_description = f"\n{planes_with_selected_bomb_string}" \
-                                      f"\nThe planes addition above was suggested by a user.\nHow can we make this bot better? What new features would you like to see? " \
-                                      f"<https://forms.gle/ybTx84kKcTepzEXU8>\nP.S. We're now a verified Discord bot! Thanks for all the support!"
+                                      f"\nP.S. We're now a verified Discord bot! Thanks for all the support!"
             embedvar = discord.Embed(title=results_title,
                                      description=results_description,
                                      color=0x00ff00)
